@@ -1,4 +1,4 @@
-package ekc.shared.model;
+package ekc.shared.model.acquisition;
 
 import java.net.URI;
 import java.util.Objects;

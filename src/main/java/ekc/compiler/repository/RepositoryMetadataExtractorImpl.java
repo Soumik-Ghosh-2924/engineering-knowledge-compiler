@@ -1,7 +1,7 @@
 package ekc.compiler.repository;
 
 import ekc.shared.exception.RepositoryAcquisitionException;
-import ekc.shared.model.RepositoryMetadata;
+import ekc.shared.model.acquisition.RepositoryMetadata;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
 import org.springframework.stereotype.Component;
@@ -15,7 +15,7 @@ import java.nio.file.Path;
  * Git repository.
  */
 @Component
-public class GitRepositoryMetadataExtractor
+public class RepositoryMetadataExtractorImpl
         implements RepositoryMetadataExtractor {
 
     @Override

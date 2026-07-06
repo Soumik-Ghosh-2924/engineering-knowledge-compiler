@@ -3,9 +3,7 @@ package ekc.compiler.repository;
 import ekc.shared.exception.RepositoryAcquisitionException;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.StoredConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,10 +18,10 @@ import java.nio.file.Path;
  * This class encapsulates all interactions with JGit.
  */
 @Component
-public class JGitRepositoryCloner implements RepositoryCloner {
+public class RepositoryClonerImpl implements RepositoryCloner {
 
     private static final Logger LOGGER =
-            LoggerFactory.getLogger(JGitRepositoryCloner.class);
+            LoggerFactory.getLogger(RepositoryClonerImpl.class);
 
     @Override
     public void load(URI repositoryUri, Path repositoryLocation) {

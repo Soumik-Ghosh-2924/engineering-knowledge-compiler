@@ -15,11 +15,11 @@ import java.nio.file.Path;
  * Local filesystem implementation of the compiler workspace.
  */
 @Component
-public class LocalWorkspaceProvider implements WorkspaceProvider {
+public class WorkspaceProviderImpl implements WorkspaceProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LocalWorkspaceProvider.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceProviderImpl.class);
     private final CompilerWorkspaceProperties properties;
-    public LocalWorkspaceProvider(CompilerWorkspaceProperties properties) {
+    public WorkspaceProviderImpl(CompilerWorkspaceProperties properties) {
         this.properties = properties;
     }
 

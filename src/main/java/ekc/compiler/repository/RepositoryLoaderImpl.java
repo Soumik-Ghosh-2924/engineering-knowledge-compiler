@@ -1,8 +1,8 @@
 package ekc.compiler.repository;
 
-import ekc.shared.model.CompileRepositoryRequest;
-import ekc.shared.model.CompilerContext;
-import ekc.shared.model.RepositoryMetadata;
+import ekc.shared.model.acquisition.CompileRepositoryRequest;
+import ekc.shared.model.acquisition.CompilerContext;
+import ekc.shared.model.acquisition.RepositoryMetadata;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -70,6 +70,6 @@ public class RepositoryLoaderImpl implements RepositoryLoader {
          * Stage 6
          * Build compiler context.
          */
-        return new CompilerContext(metadata);
+        return new CompilerContext(metadata, null);
     }
 }

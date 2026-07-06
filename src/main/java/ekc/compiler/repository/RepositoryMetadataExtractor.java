@@ -1,6 +1,6 @@
 package ekc.compiler.repository;
 
-import ekc.shared.model.RepositoryMetadata;
+import ekc.shared.model.acquisition.RepositoryMetadata;
 
 import java.nio.file.Path;
 

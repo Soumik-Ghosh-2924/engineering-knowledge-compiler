@@ -1,7 +1,7 @@
 package ekc.compiler.repository;
 
-import ekc.shared.model.CompileRepositoryRequest;
-import ekc.shared.model.CompilerContext;
+import ekc.shared.model.acquisition.CompileRepositoryRequest;
+import ekc.shared.model.acquisition.CompilerContext;
 
 /**
  * Entry point into the Repository Acquisition stage

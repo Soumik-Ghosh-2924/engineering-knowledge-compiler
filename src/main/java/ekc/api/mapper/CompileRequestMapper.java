@@ -1,7 +1,7 @@
 package ekc.api.mapper;
 
 import ekc.api.request.CompileRequest;
-import ekc.shared.model.CompileRepositoryRequest;
+import ekc.shared.model.acquisition.CompileRepositoryRequest;
 
 /**
  * Maps REST API requests into immutable compiler domain models.

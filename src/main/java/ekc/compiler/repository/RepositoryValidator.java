@@ -1,7 +1,7 @@
 package ekc.compiler.repository;
 
 import ekc.shared.exception.InvalidRepositoryException;
-import ekc.shared.model.CompileRepositoryRequest;
+import ekc.shared.model.acquisition.CompileRepositoryRequest;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;

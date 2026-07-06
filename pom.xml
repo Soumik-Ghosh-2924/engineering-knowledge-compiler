@@ -19,6 +19,8 @@
         <java.version>23</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.jgit.version>7.2.1.202505142326-r</maven.jgit.version>
+        <maven.jakarta-validation.api.version>3.0.2</maven.jakarta-validation.api.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -31,7 +33,7 @@
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
-            <version>7.2.1.202505142326-r</version>
+            <version>${maven.jgit.version}</version>
         </dependency>
 
         <dependency>
@@ -55,7 +57,7 @@
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
+            <version>${maven.jakarta-validation.api.version}</version>
         </dependency>
     </dependencies>
 
