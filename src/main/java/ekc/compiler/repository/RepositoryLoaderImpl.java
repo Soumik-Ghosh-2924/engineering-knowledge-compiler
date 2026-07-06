@@ -70,6 +70,6 @@ public class RepositoryLoaderImpl implements RepositoryLoader {
          * Stage 6
          * Build compiler context.
          */
-        return new CompilerContext(metadata, null);
+        return new CompilerContext(metadata, null, null, null);
     }
 }

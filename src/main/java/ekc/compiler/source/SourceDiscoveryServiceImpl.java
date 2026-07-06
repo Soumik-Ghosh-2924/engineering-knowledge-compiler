@@ -37,7 +37,7 @@ public class SourceDiscoveryServiceImpl implements SourceDiscoveryService {
         Map<SourceLanguage, Integer> languageDistribution = calculateLanguageDistribution(sourceFiles);
         RepositorySource repositorySource = new RepositorySource(sourceFiles, languageDistribution);
 
-        return new CompilerContext(repositoryMetadata, repositorySource);
+        return new CompilerContext(repositoryMetadata, repositorySource, null, null);
     }
 
     /**

@@ -21,6 +21,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.jgit.version>7.2.1.202505142326-r</maven.jgit.version>
         <maven.jakarta-validation.api.version>3.0.2</maven.jakarta-validation.api.version>
+        <maven.java-parser.core>3.27.1</maven.java-parser.core>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -58,6 +59,12 @@
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>${maven.jakarta-validation.api.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-core</artifactId>
+            <version>${maven.java-parser.core}</version>
         </dependency>
     </dependencies>
 

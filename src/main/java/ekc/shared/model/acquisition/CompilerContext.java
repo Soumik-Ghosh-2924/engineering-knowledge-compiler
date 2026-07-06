@@ -1,28 +1,39 @@
 package ekc.shared.model.acquisition;
 
+import ekc.shared.model.ast.RepositoryAst;
 import ekc.shared.model.source.RepositorySource;
+import ekc.shared.model.structure.RepositoryStructure;
 
 import java.util.Objects;
 
 /**
- * Shared context flowing through every stage of the compiler pipeline.
+ * Shared immutable context flowing through every stage
+ * of the compiler pipeline.
  */
 public final class CompilerContext {
 
     private final RepositoryMetadata repositoryMetadata;
+
     private final RepositorySource repositorySource;
 
+    private final RepositoryAst repositoryAst;
 
-    public CompilerContext(RepositoryMetadata repositoryMetadata) {
-        this(repositoryMetadata, null);
-    }
+    private final RepositoryStructure repositoryStructure;
 
-    /**
-     * Constructor used after Source Discovery (Day-2).
-     */
-    public CompilerContext(RepositoryMetadata repositoryMetadata, RepositorySource repositorySource) {
-        this.repositoryMetadata = Objects.requireNonNull(repositoryMetadata);
+    public CompilerContext(
+            RepositoryMetadata repositoryMetadata,
+            RepositorySource repositorySource,
+            RepositoryAst repositoryAst,
+            RepositoryStructure repositoryStructure) {
+
+        this.repositoryMetadata =
+                Objects.requireNonNull(repositoryMetadata);
+
         this.repositorySource = repositorySource;
+
+        this.repositoryAst = repositoryAst;
+
+        this.repositoryStructure = repositoryStructure;
     }
 
     public RepositoryMetadata getRepositoryMetadata() {
@@ -33,11 +44,22 @@ public final class CompilerContext {
         return repositorySource;
     }
 
+    public RepositoryAst getRepositoryAst() {
+        return repositoryAst;
+    }
+
+    public RepositoryStructure getRepositoryStructure() {
+        return repositoryStructure;
+    }
+
     @Override
     public String toString() {
+
         return "CompilerContext{" +
                 "repositoryMetadata=" + repositoryMetadata +
-                ", repositorySource=" + repositorySource +
+                ", repositorySource=" + (repositorySource != null) +
+                ", repositoryAst=" + (repositoryAst != null) +
+                ", repositoryStructure=" + (repositoryStructure != null) +
                 '}';
     }
 }
