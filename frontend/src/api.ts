@@ -1,4 +1,4 @@
-import type { CompileResponse, HealthResponse } from './types'
+import type { AnalysisResponse, HealthResponse } from './types'
 
 const parseResponse = async <T>(response: Response): Promise<T> => {
   const payload = await response.json().catch(() => null) as T | null
@@ -17,11 +17,11 @@ export const getHealth = async (signal?: AbortSignal): Promise<HealthResponse> =
   return parseResponse<HealthResponse>(response)
 }
 
-export const compileRepository = async (repositoryUrl: string): Promise<CompileResponse> => {
-  const response = await fetch('/api/v1/compiler/compile', {
+export const analyzeRepository = async (repositoryUrl: string): Promise<AnalysisResponse> => {
+  const response = await fetch('/api/v1/compiler/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ repositoryUrl }),
   })
-  return parseResponse<CompileResponse>(response)
+  return parseResponse<AnalysisResponse>(response)
 }

@@ -1,15 +1,15 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { compileRepository, getHealth } from './api'
+import { analyzeRepository, getHealth } from './api'
 import { Icon } from './icons'
 import { clearRuns, loadRuns, saveRuns } from './storage'
-import type { CompileRun, ServiceState } from './types'
+import type { AnalysisRun, ServiceState } from './types'
 
 const SAMPLE_REPO = 'https://github.com/spring-projects/spring-petclinic.git'
 const PIPELINE = [
   ['01', 'Acquire', 'Clone and validate the repository'],
   ['02', 'Discover', 'Locate supported source files'],
   ['03', 'Parse', 'Build the abstract syntax tree'],
-  ['04', 'Extract', 'Compile engineering knowledge'],
+  ['04', 'Summarize', 'Return structured analysis and diagnostics'],
 ]
 
 function repositoryName(url: string) {
@@ -36,13 +36,13 @@ const formatTime = (iso: string) => new Intl.DateTimeFormat(undefined, {
 
 export default function App() {
   const [repoUrl, setRepoUrl] = useState('')
-  const [runs, setRuns] = useState<CompileRun[]>(loadRuns)
+  const [runs, setRuns] = useState<AnalysisRun[]>(loadRuns)
   const [service, setService] = useState<ServiceState>('checking')
-  const [compiling, setCompiling] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [selectedRun, setSelectedRun] = useState<CompileRun | null>(null)
+  const [selectedRun, setSelectedRun] = useState<AnalysisRun | null>(null)
   const [theme, setTheme] = useState(() => window.localStorage.getItem('ekc.theme') || 'light')
 
   const checkHealth = useCallback(async () => {
@@ -77,11 +77,11 @@ export default function App() {
 
   const stats = useMemo(() => ({
     total: runs.length,
-    success: runs.filter((run) => run.status === 'ACCEPTED').length,
+    success: runs.filter((run) => run.status === 'ANALYZED').length,
     lastRun: runs[0]?.createdAt,
   }), [runs])
 
-  async function handleCompile(event: FormEvent) {
+  async function handleAnalyze(event: FormEvent) {
     event.preventDefault()
     const normalized = repoUrl.trim()
     if (!isRepositoryUrl(normalized)) {
@@ -89,22 +89,24 @@ export default function App() {
       return
     }
     setError('')
-    setCompiling(true)
+    setAnalyzing(true)
     const started = performance.now()
     try {
-      const response = await compileRepository(normalized)
-      const run: CompileRun = {
+      const response = await analyzeRepository(normalized)
+      const run: AnalysisRun = {
         id: crypto.randomUUID(), repositoryUrl: normalized, repositoryName: repositoryName(normalized),
-        status: response.status === 'ACCEPTED' ? 'ACCEPTED' : 'FAILED', message: response.message,
-        createdAt: new Date().toISOString(), durationMs: Math.round(performance.now() - started),
+        status: response.status === 'ANALYZED' ? 'ANALYZED' : 'FAILED', message: response.message,
+        createdAt: new Date().toISOString(),
+        durationMs: response.durationMs ?? Math.round(performance.now() - started),
+        analysis: response.analysis,
       }
       setRuns((previous) => [run, ...previous].slice(0, 20))
       setRepoUrl('')
-      setNotice('Repository compiled successfully')
+      setNotice('Repository analyzed successfully')
       checkHealth()
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'Compilation failed. Please try again.'
-      const run: CompileRun = {
+      const message = caught instanceof Error ? caught.message : 'Analysis failed. Please try again.'
+      const run: AnalysisRun = {
         id: crypto.randomUUID(), repositoryUrl: normalized, repositoryName: repositoryName(normalized),
         status: 'FAILED', message, createdAt: new Date().toISOString(),
         durationMs: Math.round(performance.now() - started),
@@ -112,7 +114,7 @@ export default function App() {
       setRuns((previous) => [run, ...previous].slice(0, 20))
       setError(message)
     } finally {
-      setCompiling(false)
+      setAnalyzing(false)
     }
   }
 
@@ -137,7 +139,7 @@ export default function App() {
           <span><strong>EKC</strong><small>Engineering Knowledge Compiler</small></span>
         </a>
         <nav className={menuOpen ? 'nav open' : 'nav'} aria-label="Primary navigation">
-          <a href="#compiler" onClick={() => setMenuOpen(false)}>Compiler</a>
+          <a href="#compiler" onClick={() => setMenuOpen(false)}>Analyze</a>
           <a href="#pipeline" onClick={() => setMenuOpen(false)}>How it works</a>
           <a href="#history" onClick={() => setMenuOpen(false)}>History</a>
           <a href="#quickstart" onClick={() => setMenuOpen(false)}>Quick start</a>
@@ -159,7 +161,7 @@ export default function App() {
           <div className="hero-meta">
             <button className={`service-pill ${service}`} onClick={checkHealth} title="Refresh service status">
               <span className="status-dot" />
-              {service === 'checking' ? 'Checking API' : service === 'online' ? 'Compiler online' : 'Compiler offline'}
+              {service === 'checking' ? 'Checking API' : service === 'online' ? 'Analyzer online' : 'Analyzer offline'}
               <Icon name="refresh" />
             </button>
             <span>API v1</span><span>Java repositories</span>
@@ -168,22 +170,22 @@ export default function App() {
 
         <section className="compile-grid" id="compiler">
           <div className="compile-card">
-            <div className="section-label">New compilation</div>
+            <div className="section-label">New repository analysis</div>
             <h2>Point us to the repository.</h2>
-            <p>Use a public HTTPS Git URL. EKC creates an isolated workspace and runs the compiler pipeline.</p>
-            <form onSubmit={handleCompile} noValidate>
+            <p>Use a public HTTPS Git URL. EKC performs static source analysis; it does not execute the repository's Maven or Gradle build.</p>
+            <form onSubmit={handleAnalyze} noValidate>
               <label htmlFor="repository-url">Repository URL</label>
               <div className={`url-control ${error ? 'has-error' : ''}`}>
                 <Icon name="github" />
-                <input id="repository-url" value={repoUrl} onChange={(e) => { setRepoUrl(e.target.value); setError('') }} placeholder="https://github.com/owner/repository.git" autoComplete="url" disabled={compiling} />
-                {repoUrl && !compiling && <button type="button" className="input-clear" onClick={() => setRepoUrl('')} aria-label="Clear URL"><Icon name="close" /></button>}
+                <input id="repository-url" value={repoUrl} onChange={(e) => { setRepoUrl(e.target.value); setError('') }} placeholder="https://github.com/owner/repository.git" autoComplete="url" disabled={analyzing} />
+                {repoUrl && !analyzing && <button type="button" className="input-clear" onClick={() => setRepoUrl('')} aria-label="Clear URL"><Icon name="close" /></button>}
               </div>
               {error && <div className="form-error" role="alert"><Icon name="warning" />{error}</div>}
               <div className="form-actions">
-                <button className="primary-button" type="submit" disabled={compiling || service === 'offline'}>
-                  {compiling ? <><span className="spinner" /> Compiling repository…</> : <><Icon name="play" /> Compile repository</>}
+                <button className="primary-button" type="submit" disabled={analyzing || service === 'offline'}>
+                  {analyzing ? <><span className="spinner" /> Analyzing repository…</> : <><Icon name="play" /> Analyze repository</>}
                 </button>
-                <button className="text-button" type="button" onClick={() => { setRepoUrl(SAMPLE_REPO); setError('') }} disabled={compiling}>Try an example</button>
+                <button className="text-button" type="button" onClick={() => { setRepoUrl(SAMPLE_REPO); setError('') }} disabled={analyzing}>Try an example</button>
               </div>
             </form>
             {service === 'offline' && <div className="offline-note"><Icon name="health" /><span><strong>The API is not reachable.</strong> Start the Spring Boot service on port 8080, then refresh status.</span></div>}
@@ -197,7 +199,7 @@ export default function App() {
             </div>
             <div className="signal-stats">
               <div><strong>{stats.total.toString().padStart(2, '0')}</strong><span>Local runs</span></div>
-              <div><strong>{stats.success.toString().padStart(2, '0')}</strong><span>Accepted</span></div>
+              <div><strong>{stats.success.toString().padStart(2, '0')}</strong><span>Analyzed</span></div>
               <div><strong>{stats.lastRun ? formatTime(stats.lastRun).split(',')[0] : '—'}</strong><span>Last run</span></div>
             </div>
             <p>Run history is kept locally in this browser. Source code is sent only to your configured EKC API.</p>
@@ -218,16 +220,16 @@ export default function App() {
 
         <section className="history-section" id="history">
           <div className="section-heading history-heading">
-            <div><div className="section-label">Your workspace</div><h2>Recent compilations</h2></div>
+            <div><div className="section-label">Your workspace</div><h2>Recent analyses</h2></div>
             {runs.length > 0 && <div className="history-actions"><button onClick={exportRuns}><Icon name="download"/> Export</button><button onClick={() => { clearRuns(); setRuns([]); setNotice('History cleared') }}><Icon name="trash"/> Clear</button></div>}
           </div>
           {runs.length === 0 ? <div className="empty-state">
-            <div className="empty-icon"><Icon name="history" /></div><h3>No compilations yet</h3><p>Your completed and failed runs will appear here.</p><a href="#compiler">Compile your first repository <Icon name="arrow" /></a>
+            <div className="empty-icon"><Icon name="history" /></div><h3>No analyses yet</h3><p>Your completed and failed runs will appear here.</p><a href="#compiler">Analyze your first repository <Icon name="arrow" /></a>
           </div> : <div className="history-table-wrap"><table>
             <thead><tr><th>Repository</th><th>Status</th><th>Submitted</th><th>Duration</th><th><span className="sr-only">Details</span></th></tr></thead>
             <tbody>{runs.map((run) => <tr key={run.id}>
               <td><div className="repo-cell"><span><Icon name="code" /></span><div><strong>{run.repositoryName}</strong><small>{run.repositoryUrl}</small></div></div></td>
-              <td><span className={`run-status ${run.status.toLowerCase()}`}><i />{run.status === 'ACCEPTED' ? 'Accepted' : 'Failed'}</span></td>
+              <td><span className={`run-status ${run.status.toLowerCase()}`}><i />{run.status === 'ANALYZED' ? 'Analyzed' : 'Failed'}</span></td>
               <td>{formatTime(run.createdAt)}</td><td>{(run.durationMs / 1000).toFixed(1)}s</td>
               <td><button className="row-button" onClick={() => setSelectedRun(run)} aria-label={`View ${run.repositoryName} details`}><Icon name="arrow" /></button></td>
             </tr>)}</tbody>
@@ -237,7 +239,7 @@ export default function App() {
         <section className="quickstart" id="quickstart">
           <div><div className="section-label light">Local development</div><h2>Start both sides<br/>in two terminals.</h2><p>The frontend proxy already points to the Spring Boot server. No CORS setup or environment variables are required.</p></div>
           <div className="command-stack">
-            <div className="command-card"><div><span>01</span> Backend</div><code>mvn spring-boot:run</code><button onClick={() => copy('mvn spring-boot:run', 'Backend command copied')}><Icon name="copy" /></button></div>
+            <div className="command-card"><div><span>01</span> Backend</div><code>cd backend &amp;&amp; ./mvnw spring-boot:run</code><button onClick={() => copy('cd backend && ./mvnw spring-boot:run', 'Backend command copied')}><Icon name="copy" /></button></div>
             <div className="command-card"><div><span>02</span> Frontend</div><code>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</code><button onClick={() => copy('cd frontend && npm install && npm run dev', 'Frontend command copied')}><Icon name="copy" /></button></div>
           </div>
         </section>
@@ -249,10 +251,29 @@ export default function App() {
       {selectedRun && <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedRun(null)}>
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="run-title" onMouseDown={(e) => e.stopPropagation()}>
           <button className="modal-close" onClick={() => setSelectedRun(null)} aria-label="Close"><Icon name="close" /></button>
-          <div className={`modal-status ${selectedRun.status.toLowerCase()}`}><Icon name={selectedRun.status === 'ACCEPTED' ? 'check' : 'warning'} /></div>
-          <div className="section-label">Compilation detail</div><h2 id="run-title">{selectedRun.repositoryName}</h2><p>{selectedRun.message}</p>
+          <div className={`modal-status ${selectedRun.status.toLowerCase()}`}><Icon name={selectedRun.status === 'ANALYZED' ? 'check' : 'warning'} /></div>
+          <div className="section-label">Analysis detail</div><h2 id="run-title">{selectedRun.repositoryName}</h2><p>{selectedRun.message}</p>
           <dl><div><dt>Status</dt><dd>{selectedRun.status}</dd></div><div><dt>Duration</dt><dd>{(selectedRun.durationMs / 1000).toFixed(2)} seconds</dd></div><div><dt>Submitted</dt><dd>{formatTime(selectedRun.createdAt)}</dd></div></dl>
           <div className="modal-url"><span>{selectedRun.repositoryUrl}</span><button onClick={() => copy(selectedRun.repositoryUrl)}><Icon name="copy" /></button></div>
+          {selectedRun.analysis && <>
+            <div className="analysis-metrics" aria-label="Repository analysis summary">
+              <div><strong>{selectedRun.analysis.sourceFiles}</strong><span>Sources</span></div>
+              <div><strong>{selectedRun.analysis.parsedFiles}</strong><span>Parsed</span></div>
+              <div><strong>{selectedRun.analysis.types}</strong><span>Types</span></div>
+              <div><strong>{selectedRun.analysis.methods}</strong><span>Methods</span></div>
+              <div><strong>{selectedRun.analysis.fields}</strong><span>Fields</span></div>
+              <div><strong>{selectedRun.analysis.imports}</strong><span>Imports</span></div>
+            </div>
+            <div className="analysis-branch">Default branch <strong>{selectedRun.analysis.defaultBranch}</strong></div>
+            {selectedRun.analysis.diagnostics.length > 0 && <div className="diagnostics">
+              <h3>Diagnostics ({selectedRun.analysis.diagnostics.length})</h3>
+              {selectedRun.analysis.diagnostics.slice(0, 5).map((diagnostic, index) => <div className={`diagnostic ${diagnostic.severity.toLowerCase()}`} key={`${diagnostic.sourcePath}-${index}`}>
+                <strong>{diagnostic.stage.replaceAll('_', ' ')}</strong>
+                <span>{diagnostic.sourcePath || 'Repository'}</span>
+                <p>{diagnostic.message}</p>
+              </div>)}
+            </div>}
+          </>}
         </section>
       </div>}
     </div>

@@ -3,7 +3,7 @@ package ekc.api.request;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * REST request for initiating repository compilation.
+ * REST request for initiating static repository analysis.
  **/
 public class CompileRequest {
     @NotBlank(message = "Repository URL must not be blank.")

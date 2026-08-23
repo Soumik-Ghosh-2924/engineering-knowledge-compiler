@@ -10,17 +10,24 @@ import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import ekc.shared.model.acquisition.CompilerContext;
 import ekc.shared.model.acquisition.RepositoryMetadata;
+import ekc.shared.model.analysis.AnalysisStage;
+import ekc.shared.model.analysis.CompilationDiagnostic;
+import ekc.shared.model.analysis.DiagnosticSeverity;
 import ekc.shared.model.ast.*;
 import ekc.shared.model.source.RepositorySource;
 import ekc.shared.model.structure.ExtractedSourceFile;
 import ekc.shared.model.structure.RepositoryStructure;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AstExtractorImpl implements AstExtractor {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AstExtractorImpl.class);
 
     @Override
     public CompilerContext extract(CompilerContext context) {
@@ -36,80 +43,39 @@ public class AstExtractorImpl implements AstExtractor {
 
         List<ExtractedSourceFile> extractedSourceFiles =
                 new ArrayList<>();
+        List<CompilationDiagnostic> diagnostics = new ArrayList<>();
 
         for (ParsedSourceFile parsedSourceFile
                 : repositoryAst.getParsedSourceFiles()) {
 
-            ParsedCompilationUnit parsedCompilationUnit =
-                    extractCompilationUnit(
-                            parsedSourceFile.getCompilationUnit());
+            try {
+                ParsedCompilationUnit parsedCompilationUnit =
+                        extractCompilationUnit(parsedSourceFile.getCompilationUnit());
 
-            extractedSourceFiles.add(
-                    new ExtractedSourceFile(
-                            parsedSourceFile,
-                            parsedCompilationUnit
-                    )
-            );
+                extractedSourceFiles.add(
+                        new ExtractedSourceFile(parsedSourceFile, parsedCompilationUnit));
+            } catch (RuntimeException exception) {
+                diagnostics.add(new CompilationDiagnostic(
+                        AnalysisStage.AST_EXTRACTION,
+                        DiagnosticSeverity.ERROR,
+                        parsedSourceFile.getSourceFile().getRelativePath(),
+                        exception.getMessage() == null
+                                ? "Unable to extract the parsed source structure."
+                                : exception.getMessage()));
+            }
         }
 
         RepositoryStructure repositoryStructure =
                 new RepositoryStructure(extractedSourceFiles);
 
-        System.out.println();
-        System.out.println("========== AST EXTRACTION REPORT ==========");
-        System.out.println();
+        LOGGER.info(
+                "AST extraction completed: repository={}, parsedFiles={}, extractedFiles={}, diagnostics={}",
+                metadata.getRepositoryName(),
+                repositoryAst.getTotalParsedFiles(),
+                extractedSourceFiles.size(),
+                diagnostics.size());
 
-        for (ExtractedSourceFile file : extractedSourceFiles) {
-
-            ParsedCompilationUnit unit =
-                    file.getParsedCompilationUnit();
-
-            System.out.println("-----------------------------------------");
-
-            System.out.println(
-                    file.getParsedSourceFile()
-                            .getSourceFile()
-                            .getRelativePath());
-
-            System.out.println("Package : "
-                    + unit.getPackageName());
-
-            System.out.println("Imports : "
-                    + unit.getImports().size());
-
-            System.out.println("Types   : "
-                    + unit.getTypes().size());
-
-            for (ParsedType type : unit.getTypes()) {
-
-                System.out.println();
-
-                System.out.println("Type : "
-                        + type.getName());
-
-                System.out.println("Kind : "
-                        + type.getKind());
-
-                System.out.println("Fields : "
-                        + type.getFields().size());
-
-                System.out.println("Methods : "
-                        + type.getMethods().size());
-
-                System.out.println("Annotations : "
-                        + type.getAnnotations().size());
-            }
-        }
-
-        System.out.println();
-        System.out.println("===========================================");
-
-        return new CompilerContext(
-                metadata,
-                repositorySource,
-                repositoryAst,
-                repositoryStructure
-        );
+        return context.withRepositoryStructure(repositoryStructure, diagnostics);
     }
 
     /**

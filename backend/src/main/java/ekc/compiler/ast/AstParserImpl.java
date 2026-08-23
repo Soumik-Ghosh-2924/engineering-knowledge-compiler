@@ -2,8 +2,11 @@ package ekc.compiler.ast;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
+import com.github.javaparser.Problem;
 import com.github.javaparser.ast.CompilationUnit;
-import ekc.shared.exception.AstParserException;
+import ekc.shared.model.analysis.AnalysisStage;
+import ekc.shared.model.analysis.CompilationDiagnostic;
+import ekc.shared.model.analysis.DiagnosticSeverity;
 import ekc.shared.model.acquisition.CompilerContext;
 import ekc.shared.model.acquisition.RepositoryMetadata;
 import ekc.shared.model.ast.ParsedSourceFile;
@@ -36,34 +39,71 @@ public class AstParserImpl implements AstParser {
 
         RepositoryMetadata repositoryMetadata = context.getRepositoryMetadata();
         RepositorySource repositorySource = context.getRepositorySource();
-        RepositoryAst repositoryAst = parseRepository(repositorySource);
+        ParseRepositoryResult result = parseRepository(repositorySource);
 
-        return new CompilerContext(repositoryMetadata, repositorySource, repositoryAst, null);
+        return context.withRepositoryAst(result.repositoryAst(), result.diagnostics());
     }
 
-
-    private RepositoryAst parseRepository(RepositorySource repositorySource) {
+    private ParseRepositoryResult parseRepository(RepositorySource repositorySource) {
         List<ParsedSourceFile> parsedFiles = new ArrayList<>();
+        List<CompilationDiagnostic> diagnostics = new ArrayList<>();
         for (SourceFile sourceFile : repositorySource.getSourceFiles()) {
-            parsedFiles.add(parseSourceFile(sourceFile));
+            ParseSourceResult result = parseSourceFile(sourceFile);
+            if (result.parsedSourceFile() != null) {
+                parsedFiles.add(result.parsedSourceFile());
+            }
+            diagnostics.addAll(result.diagnostics());
         }
-        return new RepositoryAst(parsedFiles);
+        return new ParseRepositoryResult(new RepositoryAst(parsedFiles), diagnostics);
     }
 
-
-    private ParsedSourceFile parseSourceFile(SourceFile sourceFile) {
+    private ParseSourceResult parseSourceFile(SourceFile sourceFile) {
+        List<CompilationDiagnostic> diagnostics = new ArrayList<>();
         try {
             String source = Files.readString(sourceFile.getPath());
             ParseResult<CompilationUnit> result = javaParser.parse(source);
-            CompilationUnit compilationUnit =
-                    result.getResult().orElseThrow(() ->
-                                    new AstParserException(
-                                            "Failed to parse source file: "
-                                                    + sourceFile.getRelativePath()));
-            return new ParsedSourceFile(sourceFile, compilationUnit, null);
-        } catch (IOException exception) {
+            for (Problem problem : result.getProblems()) {
+                diagnostics.add(new CompilationDiagnostic(
+                        AnalysisStage.AST_PARSING,
+                        result.getResult().isPresent()
+                                ? DiagnosticSeverity.WARNING
+                                : DiagnosticSeverity.ERROR,
+                        sourceFile.getRelativePath(),
+                        problem.getVerboseMessage()));
+            }
 
-            throw new AstParserException("Unable to read source file: " + sourceFile.getRelativePath(), exception);
+            ParsedSourceFile parsedSourceFile = result.getResult()
+                    .map(unit -> new ParsedSourceFile(sourceFile, unit, null))
+                    .orElse(null);
+
+            if (parsedSourceFile == null && diagnostics.isEmpty()) {
+                diagnostics.add(new CompilationDiagnostic(
+                        AnalysisStage.AST_PARSING,
+                        DiagnosticSeverity.ERROR,
+                        sourceFile.getRelativePath(),
+                        "JavaParser did not produce a compilation unit."));
+            }
+
+            return new ParseSourceResult(parsedSourceFile, diagnostics);
+        } catch (IOException | RuntimeException exception) {
+            diagnostics.add(new CompilationDiagnostic(
+                    AnalysisStage.AST_PARSING,
+                    DiagnosticSeverity.ERROR,
+                    sourceFile.getRelativePath(),
+                    exception.getMessage() == null
+                            ? "Unable to parse source file."
+                            : exception.getMessage()));
+            return new ParseSourceResult(null, diagnostics);
         }
+    }
+
+    private record ParseRepositoryResult(
+            RepositoryAst repositoryAst,
+            List<CompilationDiagnostic> diagnostics) {
+    }
+
+    private record ParseSourceResult(
+            ParsedSourceFile parsedSourceFile,
+            List<CompilationDiagnostic> diagnostics) {
     }
 }

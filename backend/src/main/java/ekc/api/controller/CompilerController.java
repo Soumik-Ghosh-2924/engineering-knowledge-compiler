@@ -3,16 +3,11 @@ package ekc.api.controller;
 import ekc.api.mapper.CompileRequestMapper;
 import ekc.api.request.CompileRequest;
 import ekc.api.response.CompileResponse;
-import ekc.compiler.ast.AstExtractor;
-import ekc.compiler.ast.AstParser;
-import ekc.compiler.repository.RepositoryLoader;
-import ekc.compiler.source.SourceDiscoveryService;
-import ekc.shared.model.acquisition.CompilerContext;
+import ekc.compiler.CompilerEngine;
+import ekc.shared.model.analysis.CompilationResult;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 
 /**
  * Entry point into the Engineering Knowledge Compiler.
@@ -21,48 +16,30 @@ import java.net.URI;
 @RequestMapping("/api/v1/compiler")
 public class CompilerController {
 
-    private final RepositoryLoader repositoryLoader;
+    private final CompilerEngine compilerEngine;
     private final CompileRequestMapper compileRequestMapper;
-    private final SourceDiscoveryService sourceDiscoveryService;
-    private final AstParser astParser;
-    private final AstExtractor astExtractor;
 
     public CompilerController(
-            RepositoryLoader repositoryLoader,
-            SourceDiscoveryService sourceDiscoveryService,
-            AstParser astParser,
-            AstExtractor astExtractor,
+            CompilerEngine compilerEngine,
             CompileRequestMapper compileRequestMapper) {
 
-        this.repositoryLoader = repositoryLoader;
-        this.sourceDiscoveryService = sourceDiscoveryService;
-        this.astParser = astParser;
-        this.astExtractor = astExtractor;
+        this.compilerEngine = compilerEngine;
         this.compileRequestMapper = compileRequestMapper;
     }
 
-    @PostMapping("/compile")
-    public ResponseEntity<CompileResponse> compile(
+    /**
+     * Performs static repository analysis. The submitted repository's own
+     * Maven/Gradle build is not executed.
+     *
+     * /compile remains temporarily available for existing clients.
+     */
+    @PostMapping({"/analyze", "/compile"})
+    public ResponseEntity<CompileResponse> analyze(
             @Valid @RequestBody CompileRequest request) {
 
-        CompilerContext context =
-                repositoryLoader.load(
-                        compileRequestMapper.toDomain(request));
+        CompilationResult result = compilerEngine.analyze(
+                compileRequestMapper.toDomain(request));
 
-        context =
-                sourceDiscoveryService.discover(context);
-
-        context =
-                astParser.parse(context);
-
-        context =
-                astExtractor.extract(context);
-
-        return ResponseEntity
-                .accepted()
-                .body(new CompileResponse(
-                        "ACCEPTED",
-                        "Repository compiled successfully."
-                ));
+        return ResponseEntity.ok(new CompileResponse(result));
     }
 }
