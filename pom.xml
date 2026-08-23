@@ -24,6 +24,8 @@
         <maven.java-parser.core>3.27.1</maven.java-parser.core>
         <maven.jib-plugin.version>3.5.2</maven.jib-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <image.repository>dockersg6/engineering-knowledge-compiler</image.repository>
+        <image.tag>dev</image.tag>
     </properties>
 
     <dependencies>
@@ -83,7 +85,7 @@
                         <image>eclipse-temurin:21-jre</image>
                     </from>
                     <to>
-                        <image>dockersg6/engineering-knowledge-compiler:${project.version}</image>
+                        <image>${image.repository}:${image.tag}</image>
                     </to>
                 </configuration>
             </plugin>
