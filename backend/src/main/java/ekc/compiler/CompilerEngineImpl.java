@@ -8,6 +8,7 @@ import ekc.shared.model.acquisition.CompileRepositoryRequest;
 import ekc.shared.model.acquisition.CompilerContext;
 import ekc.shared.model.analysis.CompilationResult;
 import ekc.shared.model.analysis.CompilationSummary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -21,6 +22,7 @@ public class CompilerEngineImpl implements CompilerEngine {
     private final AstExtractor astExtractor;
     private final Clock clock;
 
+    @Autowired
     public CompilerEngineImpl(
             RepositoryLoader repositoryLoader,
             SourceDiscoveryService sourceDiscoveryService,
