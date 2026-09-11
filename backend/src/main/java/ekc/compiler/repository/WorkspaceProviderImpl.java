@@ -37,11 +37,19 @@ public class WorkspaceProviderImpl implements WorkspaceProvider {
 
     @Override
     public Path resolveRepositoryLocation(URI repositoryUri) {
-
-        String path = repositoryUri.getPath();
-        String repositoryName = path.substring(path.lastIndexOf('/') + 1)
-                .replace(".git", "");
-        return getRepositoriesDirectory().resolve(repositoryName);
+        String repositoryPath = repositoryUri.getPath();
+        String withoutGitSuffix = repositoryPath.endsWith(".git")
+                ? repositoryPath.substring(0, repositoryPath.length() - 4)
+                : repositoryPath;
+        String normalizedPath = withoutGitSuffix.replaceFirst("^/+", "");
+        Path repositoryLocation = getRepositoriesDirectory()
+                .resolve(repositoryUri.getHost().toLowerCase())
+                .resolve(normalizedPath)
+                .normalize();
+        if (!repositoryLocation.startsWith(getRepositoriesDirectory())) {
+            throw new IllegalArgumentException("Repository location escapes the compiler workspace.");
+        }
+        return repositoryLocation;
     }
 
     @Override

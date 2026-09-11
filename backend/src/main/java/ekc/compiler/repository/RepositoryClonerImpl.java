@@ -61,6 +61,11 @@ public class RepositoryClonerImpl implements RepositoryCloner {
             git.fetch()
                     .setRemote("origin")
                     .call();
+            String branch = git.getRepository().getBranch();
+            git.reset()
+                    .setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD)
+                    .setRef("origin/" + branch)
+                    .call();
         }
     }
 }

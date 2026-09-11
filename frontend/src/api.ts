@@ -1,4 +1,11 @@
-import type { AnalysisResponse, HealthResponse } from './types'
+import type {
+  AnalysisResponse,
+  HealthResponse,
+  WorkspaceAnalysisResponse,
+  WorkspaceOverviewResponse,
+  WorkspaceRepositoryInput,
+  WorkspaceResponse,
+} from './types'
 
 const parseResponse = async <T>(response: Response): Promise<T> => {
   const payload = await response.json().catch(() => null) as T | null
@@ -24,4 +31,33 @@ export const analyzeRepository = async (repositoryUrl: string): Promise<Analysis
     body: JSON.stringify({ repositoryUrl }),
   })
   return parseResponse<AnalysisResponse>(response)
+}
+
+export const createWorkspace = async (
+  name: string,
+  repositories: WorkspaceRepositoryInput[],
+): Promise<WorkspaceResponse> => {
+  const response = await fetch('/api/v2/workspaces', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ name, repositories }),
+  })
+  return parseResponse<WorkspaceResponse>(response)
+}
+
+export const startWorkspaceAnalysis = async (workspaceId: string): Promise<WorkspaceAnalysisResponse> => {
+  const response = await fetch(`/api/v2/workspaces/${workspaceId}/analyse`, {
+    method: 'POST', headers: { Accept: 'application/json' },
+  })
+  return parseResponse<WorkspaceAnalysisResponse>(response)
+}
+
+export const getWorkspaceAnalysis = async (analysisId: string): Promise<WorkspaceAnalysisResponse> => {
+  const response = await fetch(`/api/v2/analyses/${analysisId}`, { headers: { Accept: 'application/json' } })
+  return parseResponse<WorkspaceAnalysisResponse>(response)
+}
+
+export const getWorkspaceOverview = async (analysisId: string): Promise<WorkspaceOverviewResponse> => {
+  const response = await fetch(`/api/v2/analyses/${analysisId}/overview`, { headers: { Accept: 'application/json' } })
+  return parseResponse<WorkspaceOverviewResponse>(response)
 }

@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import java.util.NoSuchElementException;
+
 /**
  * Converts compiler exceptions into REST responses.
  */
@@ -53,6 +55,20 @@ public class GlobalExceptionHandler {
                         "FAILED",
                         exception.getMessage()
                 ));
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<CompileResponse> handleNotFound(NoSuchElementException exception) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new CompileResponse("FAILED", exception.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<CompileResponse> handleConflict(IllegalStateException exception) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new CompileResponse("FAILED", exception.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

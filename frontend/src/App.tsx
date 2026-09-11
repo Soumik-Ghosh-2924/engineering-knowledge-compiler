@@ -3,6 +3,7 @@ import { analyzeRepository, getHealth } from './api'
 import { Icon } from './icons'
 import { clearRuns, loadRuns, saveRuns } from './storage'
 import type { AnalysisRun, ServiceState } from './types'
+import WorkspaceAnalyzer from './WorkspaceAnalyzer'
 
 const SAMPLE_REPO = 'https://github.com/spring-projects/spring-petclinic.git'
 const PIPELINE = [
@@ -11,6 +12,7 @@ const PIPELINE = [
   ['03', 'Parse', 'Build the abstract syntax tree'],
   ['04', 'Summarize', 'Return structured analysis and diagnostics'],
 ]
+const PHASE2_ENABLED = import.meta.env.VITE_PHASE2_ENABLED === 'true'
 
 function repositoryName(url: string) {
   try {
@@ -140,6 +142,7 @@ export default function App() {
         </a>
         <nav className={menuOpen ? 'nav open' : 'nav'} aria-label="Primary navigation">
           <a href="#compiler" onClick={() => setMenuOpen(false)}>Analyze</a>
+          {PHASE2_ENABLED && <a href="#workspace" onClick={() => setMenuOpen(false)}>System workspace</a>}
           <a href="#pipeline" onClick={() => setMenuOpen(false)}>How it works</a>
           <a href="#history" onClick={() => setMenuOpen(false)}>History</a>
           <a href="#quickstart" onClick={() => setMenuOpen(false)}>Quick start</a>
@@ -205,6 +208,8 @@ export default function App() {
             <p>Run history is kept locally in this browser. Source code is sent only to your configured EKC API.</p>
           </aside>
         </section>
+
+        {PHASE2_ENABLED && <WorkspaceAnalyzer />}
 
         <section className="pipeline-section" id="pipeline">
           <div className="section-heading"><div><div className="section-label">The pipeline</div><h2>Four stages. One clear outcome.</h2></div><p>Each request moves through the backend’s acquisition and AST processing flow.</p></div>
