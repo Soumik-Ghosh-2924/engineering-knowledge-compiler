@@ -112,10 +112,11 @@ export default function KnowledgeGraph({ graph, repositoryName }: { graph: Repos
   const [filter, setFilter] = useState<GraphFilter>('layers')
   const [zoom, setZoom] = useState(1)
   const connectedIds = useMemo(() => new Set(graph.edges.flatMap((edge) => [edge.source, edge.target])), [graph.edges])
-  const filteredNodes = useMemo(() => {
+  const matchingNodes = useMemo(() => {
     const matched = graph.nodes.filter((node) => filter === 'all' || (filter === 'layers' ? architectureKinds.has(node.kind) : connectedIds.has(node.id)))
-    return (matched.length > 0 ? matched : graph.nodes).slice(0, 80)
+    return matched.length > 0 ? matched : graph.nodes
   }, [graph.nodes, connectedIds, filter])
+  const filteredNodes = useMemo(() => matchingNodes.slice(0, 80), [matchingNodes])
   const visibleIds = useMemo(() => new Set(filteredNodes.map((node) => node.id)), [filteredNodes])
   const filteredEdges = useMemo(() => graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target) && importantEdges.has(edge.kind)), [graph.edges, visibleIds])
   const [selectedId, setSelectedId] = useState(graph.nodes.find((node) => node.kind === 'APPLICATION')?.id || graph.nodes[0]?.id || '')
@@ -138,6 +139,6 @@ export default function KnowledgeGraph({ graph, repositoryName }: { graph: Repos
       <NodeInspector node={selected} outgoing={graph.edges.filter((edge) => edge.source === selected.id)} incoming={graph.edges.filter((edge) => edge.target === selected.id)} onInternals={() => setMode('internals')}/>
     </div>
     <div className="graph-legend">{kindOrder.filter((kind) => graph.nodes.some((node) => node.kind === kind)).map((kind) => <span key={kind}><i className={`kind-${kind.toLowerCase()}`}/>{kind.replace('_', ' ')}</span>)}<span><i className="inferred-edge"/>Inferred discovery</span></div>
-    {graph.truncated && <p className="graph-limit">Showing the first {graph.nodes.length} of {graph.totalTypeCount} types. Refine package filtering in a later iteration.</p>}
+    {(graph.truncated || matchingNodes.length > filteredNodes.length) && <p className="graph-limit">This canvas shows {filteredNodes.length} types for readability. {graph.truncated ? `${graph.totalTypeCount} types were detected; the API retained ${graph.nodes.length}. ` : ''}{matchingNodes.length > filteredNodes.length ? `${matchingNodes.length} types match the current filter. ` : ''}Use the focused layer filters to narrow the map.</p>}
   </section>
 }
