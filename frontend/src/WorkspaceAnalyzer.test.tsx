@@ -18,17 +18,20 @@ describe('Phase 2 workspace analyzer', () => {
     expect(screen.queryByText(/Declared purpose/)).not.toBeInTheDocument()
   })
 
-  it('requires a complete ref pair before requesting change analysis', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+  it('treats an incomplete ref pair as repository discovery', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ message: 'Stop after request inspection' }), { status: 500 }))
     render(<WorkspaceAnalyzer />)
     fireEvent.change(screen.getByLabelText('Workspace name'), { target: { value: 'EKC system' } })
     fireEvent.change(screen.getByText('Repository URL').querySelector('input')!, { target: { value: 'https://github.com/acme/app.git' } })
-    fireEvent.change(screen.getByLabelText('Compare from (base ref)'), { target: { value: 'main' } })
+    fireEvent.change(screen.getByLabelText(/Compare from \(base ref\)/), { target: { value: 'main' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'Build system overview' }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Provide both the base and head ref')
-    expect(fetchSpy).not.toHaveBeenCalled()
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+    const request = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+    expect(request.repositories[0]).not.toHaveProperty('baseRef')
+    expect(request.repositories[0]).not.toHaveProperty('headRef')
+    expect(screen.getByRole('button', { name: '← Edit workspace' })).toBeInTheDocument()
   })
 
   it('creates, analyzes, and displays a workspace overview', async () => {
@@ -75,6 +78,8 @@ describe('Phase 2 workspace analyzer', () => {
     fireEvent.change(screen.getByText('Repository URL').querySelector('input')!, { target: { value: 'https://github.com/acme/app.git' } })
     fireEvent.click(screen.getByRole('button', { name: 'Build system overview' }))
     await waitFor(() => expect(screen.getByLabelText('Workspace system overview')).toHaveTextContent('EKC system'))
+    expect(screen.queryByLabelText('Workspace name')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '← Edit workspace' })).toBeInTheDocument()
     expect(screen.getByText('EKC turns repository structure into engineering knowledge.')).toBeInTheDocument()
     expect(screen.getByText('README · HIGH')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open GitHub diff for pom.xml' })).toHaveAttribute('href', 'https://github.com/acme/app/compare/a...b#diff-test')

@@ -50,13 +50,14 @@ function ChangeIntelligence({ change }: { change?: RepositoryChangeAnalysis | nu
   </section>
 }
 
-export default function WorkspaceAnalyzer() {
+export default function WorkspaceAnalyzer({ onViewChange }: { onViewChange?: (resultsActive: boolean) => void }) {
   const [name, setName] = useState('')
   const [repositories, setRepositories] = useState<RepositoryDraft[]>([newRepository(true)])
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [overview, setOverview] = useState<WorkspaceOverviewResponse | null>(null)
   const [working, setWorking] = useState(false)
+  const [resultsActive, setResultsActive] = useState(false)
 
   function updateRepository(key: string, change: Partial<RepositoryDraft>) {
     setRepositories((current) => current.map((repository) => repository.key === key ? { ...repository, ...change } : repository))
@@ -82,22 +83,26 @@ export default function WorkspaceAnalyzer() {
     setOverview(null)
     if (!name.trim()) return setError('Name this workspace before starting analysis.')
     if (repositories.some((repository) => !repository.repositoryUrl.trim())) return setError('Every repository needs a URL.')
-    if (repositories.some((repository) => Boolean(repository.baseRef?.trim()) !== Boolean(repository.headRef?.trim()))) {
-      return setError('Provide both the base and head ref for each requested change comparison.')
-    }
-    if (repositories.some((repository) => repository.baseRef?.trim() && repository.baseRef.trim() === repository.headRef?.trim())) {
+    if (repositories.some((repository) => repository.baseRef?.trim() && repository.headRef?.trim() && repository.baseRef.trim() === repository.headRef.trim())) {
       return setError('The base and head refs must be different.')
     }
+    setResultsActive(true)
+    onViewChange?.(true)
     setWorking(true)
     try {
       setStatus('Creating workspace')
-      const workspace = await createWorkspace(name.trim(), repositories.map((repository) => ({
-        repositoryUrl: repository.repositoryUrl.trim(),
-        role: repository.role,
-        primary: repository.primary,
-        baseRef: repository.baseRef?.trim(),
-        headRef: repository.headRef?.trim(),
-      })))
+      const workspace = await createWorkspace(name.trim(), repositories.map((repository) => {
+        const baseRef = repository.baseRef?.trim()
+        const headRef = repository.headRef?.trim()
+        const compareChanges = Boolean(baseRef && headRef)
+        return {
+          repositoryUrl: repository.repositoryUrl.trim(),
+          role: repository.role,
+          primary: repository.primary,
+          baseRef: compareChanges ? baseRef : undefined,
+          headRef: compareChanges ? headRef : undefined,
+        }
+      }))
       setStatus('Analysis queued')
       let analysis = await startWorkspaceAnalysis(workspace.id)
       for (let attempt = 0; attempt < 120 && !terminalStatuses.has(analysis.status); attempt += 1) {
@@ -117,6 +122,26 @@ export default function WorkspaceAnalyzer() {
     }
   }
 
+  function editWorkspace() {
+    setResultsActive(false)
+    onViewChange?.(false)
+  }
+
+  const overviewContent = overview && <div className="workspace-overview" aria-label="Workspace system overview">
+    <div className="overview-summary"><div><span>Workspace</span><strong>{overview.workspaceName}</strong></div><div><span>Analyzed</span><strong>{overview.systemOverview.analyzedRepositories}/{overview.systemOverview.repositories}</strong></div><div><span>Relationships</span><strong>{overview.systemOverview.suggestedRelationships.length}</strong></div></div>
+    <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => {
+      const repositoryName = brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '') || 'Repository'
+      return <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · SYSTEM ANCHOR' : ''}</div><h3>{repositoryName}</h3><div className="understanding-label">Repository understanding</div><p>{brief.purpose.value || 'Repository understanding is unavailable because analysis did not complete.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.citations[0]?.sourceType || brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.knowledgeGraph && <KnowledgeGraph graph={brief.knowledgeGraph} repositoryName={repositoryName}/>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>
+    })}</div>
+  </div>
+
+  if (resultsActive) return <section className="workspace-section workspace-results" id="workspace">
+    <div className="results-heading"><div><div className="section-label">System overview</div><h2>{name}</h2><p>Explore architecture and evaluate changes without the setup form competing for attention.</p></div><button type="button" onClick={editWorkspace} disabled={working}>← Edit workspace</button></div>
+    {working && <div className="analysis-progress" role="status"><span className="spinner"/><div><strong>{status}</strong><p>Building repository understanding and structural relationships.</p></div></div>}
+    {!working && error && <div className="results-error" role="alert"><strong>Analysis could not be completed</strong><p>{error}</p><button type="button" onClick={editWorkspace}>Review workspace inputs</button></div>}
+    {overviewContent}
+  </section>
+
   return <section className="workspace-section" id="workspace">
     <div className="section-heading"><div><div className="section-label">Phase 2 preview</div><h2>Map a system, not only a repository.</h2></div><p>Group related public repositories and build an evidence-backed orientation view.</p></div>
     <form className="workspace-form" onSubmit={submit}>
@@ -131,8 +156,8 @@ export default function WorkspaceAnalyzer() {
               <option value="APPLICATION">Application</option><option value="DEPLOYMENT">Deployment / GitOps</option><option value="SERVICE">Service</option><option value="SHARED_LIBRARY">Shared library</option>
             </select></label>
           </div>
-          <div className="repository-input-grid"><label>Compare from (base ref)<input value={repository.baseRef} onChange={(event) => updateRepository(repository.key, { baseRef: event.target.value })} placeholder="main or commit SHA" disabled={working}/></label><label>Compare to (head ref)<input value={repository.headRef} onChange={(event) => updateRepository(repository.key, { headRef: event.target.value })} placeholder="branch, pull/123, tag, or SHA" disabled={working}/></label></div>
-          <p className="ref-help">Optional. Provide both refs to inspect commits, file changes, dependencies, deployment impact, and review risks.</p>
+          <div className="repository-input-grid"><label>Compare from (base ref) <span>(optional)</span><input value={repository.baseRef} onChange={(event) => updateRepository(repository.key, { baseRef: event.target.value })} placeholder="main or commit SHA" disabled={working}/></label><label>Compare to (head ref) <span>(optional)</span><input value={repository.headRef} onChange={(event) => updateRepository(repository.key, { headRef: event.target.value })} placeholder="Leave empty for repository discovery" disabled={working}/></label></div>
+          <p className="ref-help">Leave comparison empty for first-time discovery. Change intelligence runs only when both refs are provided.</p>
         </article>)}
       </div>
       <div className="system-anchor">
@@ -145,12 +170,5 @@ export default function WorkspaceAnalyzer() {
       <div className="workspace-actions"><button type="button" onClick={() => setRepositories((current) => [...current, newRepository()])} disabled={working || repositories.length >= 5}>+ Add repository</button><button className="primary-button" type="submit" disabled={working}>{working ? status : 'Build system overview'}</button></div>
       {error && <div className="form-error" role="alert">{error}</div>}
     </form>
-    {overview && <div className="workspace-overview" aria-label="Workspace system overview">
-      <div className="overview-summary"><div><span>Workspace</span><strong>{overview.workspaceName}</strong></div><div><span>Analyzed</span><strong>{overview.systemOverview.analyzedRepositories}/{overview.systemOverview.repositories}</strong></div><div><span>Relationships</span><strong>{overview.systemOverview.suggestedRelationships.length}</strong></div></div>
-      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => {
-        const repositoryName = brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '') || 'Repository'
-        return <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · SYSTEM ANCHOR' : ''}</div><h3>{repositoryName}</h3><div className="understanding-label">Repository understanding</div><p>{brief.purpose.value || 'Repository understanding is unavailable because analysis did not complete.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.citations[0]?.sourceType || brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}{brief.knowledgeGraph && <KnowledgeGraph graph={brief.knowledgeGraph} repositoryName={repositoryName}/>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>
-      })}</div>
-    </div>}
   </section>
 }

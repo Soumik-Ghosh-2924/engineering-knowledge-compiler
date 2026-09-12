@@ -209,6 +209,18 @@ footer a { text-decoration: none; font-weight: 600; }
 .diagnostic p { margin: 6px 0 0; font-size: 9px; line-height: 1.45; color: var(--muted); }
 
 .workspace-section { max-width: 1160px; margin: 0 auto 110px; }
+.workspace-results { padding-top: 54px; }
+.results-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 26px; }
+.results-heading h2 { margin: 11px 0 6px; font-size: clamp(32px, 4vw, 48px); line-height: 1.05; letter-spacing: -.045em; }
+.results-heading p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.results-heading > button, .results-error button { flex: 0 0 auto; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 10px 14px; cursor: pointer; font-size: 10px; font-weight: 700; }
+.results-heading > button:hover, .results-error button:hover { border-color: var(--lime-dark); }
+.analysis-progress, .results-error { min-height: 210px; border: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: center; gap: 15px; padding: 30px; }
+.analysis-progress .spinner { border-color: color-mix(in srgb, var(--muted) 30%, transparent); border-top-color: var(--lime-dark); }
+.analysis-progress strong, .results-error strong { display: block; font-size: 14px; }
+.analysis-progress p, .results-error p { margin: 6px 0 0; color: var(--muted); font-size: 10px; }
+.results-error { flex-direction: column; text-align: center; }
+.results-error button { margin-top: 8px; }
 .workspace-form { margin-top: 0; padding: clamp(28px, 4vw, 48px); border: 1px solid var(--line); background: var(--card); }
 .workspace-form > label, .repository-input-card label, .system-anchor label { display: grid; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .workspace-form input, .workspace-form select { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 12px 13px; font: 400 11px DM Mono, monospace; outline: 0; }
@@ -225,6 +237,7 @@ footer a { text-decoration: none; font-weight: 600; }
 .ref-help { margin: -8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .workspace-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 22px; }
 .workspace-overview { margin-top: 20px; border: 1px solid var(--line); background: var(--card); }
+.workspace-results .workspace-overview { margin-top: 0; }
 .overview-summary { display: grid; grid-template-columns: 2fr 1fr 1fr; border-bottom: 1px solid var(--line); }
 .overview-summary > div { padding: 18px; border-right: 1px solid var(--line); }
 .overview-summary > div:last-child { border: 0; }
@@ -421,6 +434,8 @@ footer a { text-decoration: none; font-weight: 600; }
   .modal dl { grid-template-columns: 1fr; }
   .analysis-metrics { grid-template-columns: repeat(2, 1fr); }
   .workspace-section { margin-left: 14px; margin-right: 14px; }
+  .workspace-results { padding-top: 34px; }
+  .results-heading { align-items: flex-start; flex-direction: column; }
   .repository-input-grid, .repository-briefs, .overview-summary, .system-anchor { grid-template-columns: 1fr; }
   .system-anchor p { grid-column: 1; }
   .change-stats, .risk-signals, .change-evidence { grid-template-columns: 1fr; }

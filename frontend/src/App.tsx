@@ -46,6 +46,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedRun, setSelectedRun] = useState<AnalysisRun | null>(null)
   const [theme, setTheme] = useState(() => window.localStorage.getItem('ekc.theme') || 'light')
+  const [phase2ResultsActive, setPhase2ResultsActive] = useState(false)
 
   const checkHealth = useCallback(async () => {
     setService('checking')
@@ -141,11 +142,12 @@ export default function App() {
           <span><strong>EKC</strong><small>Engineering Knowledge Compiler</small></span>
         </a>
         <nav className={menuOpen ? 'nav open' : 'nav'} aria-label="Primary navigation">
-          <a href="#compiler" onClick={() => setMenuOpen(false)}>Analyze</a>
-          {PHASE2_ENABLED && <a href="#workspace" onClick={() => setMenuOpen(false)}>System workspace</a>}
-          <a href="#pipeline" onClick={() => setMenuOpen(false)}>How it works</a>
-          <a href="#history" onClick={() => setMenuOpen(false)}>History</a>
-          <a href="#quickstart" onClick={() => setMenuOpen(false)}>Quick start</a>
+          {PHASE2_ENABLED ? <a href="#workspace" onClick={() => setMenuOpen(false)}>{phase2ResultsActive ? 'System overview' : 'Analyze system'}</a> : <>
+            <a href="#compiler" onClick={() => setMenuOpen(false)}>Analyze</a>
+            <a href="#pipeline" onClick={() => setMenuOpen(false)}>How it works</a>
+            <a href="#history" onClick={() => setMenuOpen(false)}>History</a>
+            <a href="#quickstart" onClick={() => setMenuOpen(false)}>Quick start</a>
+          </>}
         </nav>
         <div className="topbar-actions">
           <button className="icon-button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={`Use ${theme === 'light' ? 'dark' : 'light'} theme`}>
@@ -157,21 +159,21 @@ export default function App() {
       </header>
 
       <main id="main">
-        <section className="hero">
+        {!phase2ResultsActive && <section className="hero">
           <div className="eyebrow"><span /> From source code to structured knowledge</div>
-          <h1>Understand a codebase.<br/><em>Before it understands you.</em></h1>
-          <p className="hero-copy">Submit a Java repository and let EKC acquire, discover, parse, and extract its engineering structure through one focused workflow.</p>
+          <h1>{PHASE2_ENABLED ? <>Understand the system.<br/><em>Navigate every connection.</em></> : <>Understand a codebase.<br/><em>Before it understands you.</em></>}</h1>
+          <p className="hero-copy">{PHASE2_ENABLED ? 'Group related Java repositories, discover their purpose, map their architecture, and inspect the risk of a proposed change.' : 'Submit a Java repository and let EKC acquire, discover, parse, and extract its engineering structure through one focused workflow.'}</p>
           <div className="hero-meta">
             <button className={`service-pill ${service}`} onClick={checkHealth} title="Refresh service status">
               <span className="status-dot" />
               {service === 'checking' ? 'Checking API' : service === 'online' ? 'Analyzer online' : 'Analyzer offline'}
               <Icon name="refresh" />
             </button>
-            <span>API v1</span><span>Java repositories</span>
+            <span>{PHASE2_ENABLED ? 'API v2' : 'API v1'}</span><span>Java repositories</span>
           </div>
-        </section>
+        </section>}
 
-        <section className="compile-grid" id="compiler">
+        {!PHASE2_ENABLED && <section className="compile-grid" id="compiler">
           <div className="compile-card">
             <div className="section-label">New repository analysis</div>
             <h2>Point us to the repository.</h2>
@@ -207,11 +209,11 @@ export default function App() {
             </div>
             <p>Run history is kept locally in this browser. Source code is sent only to your configured EKC API.</p>
           </aside>
-        </section>
+        </section>}
 
-        {PHASE2_ENABLED && <WorkspaceAnalyzer />}
+        {PHASE2_ENABLED && <WorkspaceAnalyzer onViewChange={setPhase2ResultsActive} />}
 
-        <section className="pipeline-section" id="pipeline">
+        {!phase2ResultsActive && <section className="pipeline-section" id="pipeline">
           <div className="section-heading"><div><div className="section-label">The pipeline</div><h2>Four stages. One clear outcome.</h2></div><p>Each request moves through the backend’s acquisition and AST processing flow.</p></div>
           <div className="pipeline-list">
             {PIPELINE.map(([number, title, description], index) => <article className="pipeline-item" key={number}>
@@ -221,9 +223,9 @@ export default function App() {
               {index < PIPELINE.length - 1 && <Icon name="chevron" className="pipeline-arrow" />}
             </article>)}
           </div>
-        </section>
+        </section>}
 
-        <section className="history-section" id="history">
+        {!PHASE2_ENABLED && <section className="history-section" id="history">
           <div className="section-heading history-heading">
             <div><div className="section-label">Your workspace</div><h2>Recent analyses</h2></div>
             {runs.length > 0 && <div className="history-actions"><button onClick={exportRuns}><Icon name="download"/> Export</button><button onClick={() => { clearRuns(); setRuns([]); setNotice('History cleared') }}><Icon name="trash"/> Clear</button></div>}
@@ -239,15 +241,15 @@ export default function App() {
               <td><button className="row-button" onClick={() => setSelectedRun(run)} aria-label={`View ${run.repositoryName} details`}><Icon name="arrow" /></button></td>
             </tr>)}</tbody>
           </table></div>}
-        </section>
+        </section>}
 
-        <section className="quickstart" id="quickstart">
+        {!phase2ResultsActive && <section className="quickstart" id="quickstart">
           <div><div className="section-label light">Local development</div><h2>Start both sides<br/>in two terminals.</h2><p>The frontend proxy already points to the Spring Boot server. No CORS setup or environment variables are required.</p></div>
           <div className="command-stack">
             <div className="command-card"><div><span>01</span> Backend</div><code>cd backend &amp;&amp; ./mvnw spring-boot:run</code><button onClick={() => copy('cd backend && ./mvnw spring-boot:run', 'Backend command copied')}><Icon name="copy" /></button></div>
             <div className="command-card"><div><span>02</span> Frontend</div><code>cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</code><button onClick={() => copy('cd frontend && npm install && npm run dev', 'Frontend command copied')}><Icon name="copy" /></button></div>
           </div>
-        </section>
+        </section>}
       </main>
 
       <footer><div className="brand"><span className="brand-mark">E</span><span><strong>EKC</strong><small>Engineering Knowledge Compiler</small></span></div><p>Built for engineers who inherit complexity.</p><a href="#main">Back to top ↑</a></footer>
