@@ -2,6 +2,7 @@ package ekc.compiler;
 
 import ekc.compiler.ast.AstExtractor;
 import ekc.compiler.ast.AstParser;
+import ekc.compiler.graph.KnowledgeGraphBuilder;
 import ekc.compiler.repository.RepositoryLoader;
 import ekc.compiler.source.SourceDiscoveryService;
 import ekc.shared.model.acquisition.CompileRepositoryRequest;
@@ -60,6 +61,7 @@ public class CompilerEngineImpl implements CompilerEngine {
                 "ANALYZED",
                 "Repository analyzed successfully. No target build was executed.",
                 durationMs,
-                summary);
+                summary,
+                new KnowledgeGraphBuilder().build(context));
     }
 }

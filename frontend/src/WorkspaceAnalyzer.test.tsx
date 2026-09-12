@@ -52,6 +52,18 @@ describe('Phase 2 workspace analyzer', () => {
             riskSignals: [{ category: 'DEPENDENCY_CHANGE', severity: 'HIGH', title: 'Dependency definition changed', description: 'Review dependencies.', evidence: ['pom.xml'] }],
             message: 'Compared',
           },
+          knowledgeGraph: {
+            totalTypeCount: 3, truncated: false,
+            nodes: [
+              { id: 'type:app.Application', label: 'Application', kind: 'APPLICATION', qualifiedName: 'app.Application', packageName: 'app', sourcePath: 'Application.java', annotations: ['SpringBootApplication'], imports: [], fields: [], methods: [] },
+              { id: 'type:app.OrderController', label: 'OrderController', kind: 'CONTROLLER', qualifiedName: 'app.OrderController', packageName: 'app', sourcePath: 'OrderController.java', annotations: ['RestController'], imports: ['app.OrderService'], fields: [{ name: 'service', type: 'OrderService' }], methods: [{ name: 'getOrder', returnType: 'OrderDto', annotations: ['GetMapping'], parameters: [{ name: 'id', type: 'Long' }], localVariables: [{ name: 'result', type: 'OrderDto' }] }] },
+              { id: 'type:app.OrderService', label: 'OrderService', kind: 'SERVICE', qualifiedName: 'app.OrderService', packageName: 'app', sourcePath: 'OrderService.java', annotations: ['Service'], imports: [], fields: [], methods: [] },
+            ],
+            edges: [
+              { source: 'type:app.Application', target: 'type:app.OrderController', kind: 'DISCOVERS', label: 'framework discovery', confidence: 'MEDIUM', evidence: 'Spring component scanning' },
+              { source: 'type:app.OrderController', target: 'type:app.OrderService', kind: 'DEPENDS_ON', label: 'field service', confidence: 'HIGH', evidence: 'Field type: OrderService' },
+            ],
+          },
           message: 'Analyzed',
         }],
         systemOverview: { repositories: 1, analyzedRepositories: 1, failedRepositories: 0, suggestedRelationships: [] },
@@ -71,6 +83,12 @@ describe('Phase 2 workspace analyzer', () => {
     expect(commitTime?.textContent).toMatch(/2026/)
     expect(screen.getByText('Change intelligence')).toBeInTheDocument()
     expect(screen.getByText('Dependency definition changed')).toBeInTheDocument()
+    expect(screen.getByLabelText('app knowledge graph')).toHaveTextContent('Repository knowledge graph')
+    fireEvent.click(screen.getByLabelText('Select controller OrderController'))
+    expect(screen.getByLabelText('Selected graph node details')).toHaveTextContent('OrderController')
+    fireEvent.click(screen.getByRole('button', { name: 'Explore class internals →' }))
+    expect(screen.getByLabelText('OrderController class internals graph')).toBeInTheDocument()
+    expect(screen.getByLabelText('Method variable scope')).toHaveValue('getOrder')
     expect(globalThis.fetch).toHaveBeenCalledTimes(3)
   })
 })

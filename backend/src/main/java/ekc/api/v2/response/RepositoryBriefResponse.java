@@ -14,5 +14,6 @@ public record RepositoryBriefResponse(
         PurposeStatementResponse purpose,
         AnalysisSummaryResponse analysis,
         RepositoryChangeAnalysisResponse changeAnalysis,
+        RepositoryKnowledgeGraphResponse knowledgeGraph,
         String message) {
 }

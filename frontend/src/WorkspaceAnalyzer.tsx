@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { createWorkspace, getWorkspaceAnalysis, getWorkspaceOverview, startWorkspaceAnalysis } from './api'
+import KnowledgeGraph from './KnowledgeGraph'
 import type { RepositoryChangeAnalysis, RepositoryRole, WorkspaceOverviewResponse, WorkspaceRepositoryInput } from './types'
 
 type RepositoryDraft = WorkspaceRepositoryInput & { key: string }
@@ -146,7 +147,10 @@ export default function WorkspaceAnalyzer() {
     </form>
     {overview && <div className="workspace-overview" aria-label="Workspace system overview">
       <div className="overview-summary"><div><span>Workspace</span><strong>{overview.workspaceName}</strong></div><div><span>Analyzed</span><strong>{overview.systemOverview.analyzedRepositories}/{overview.systemOverview.repositories}</strong></div><div><span>Relationships</span><strong>{overview.systemOverview.suggestedRelationships.length}</strong></div></div>
-      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · SYSTEM ANCHOR' : ''}</div><h3>{brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '')}</h3><div className="understanding-label">Repository understanding</div><p>{brief.purpose.value || 'Repository understanding is unavailable because analysis did not complete.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.citations[0]?.sourceType || brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>)}</div>
+      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => {
+        const repositoryName = brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '') || 'Repository'
+        return <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · SYSTEM ANCHOR' : ''}</div><h3>{repositoryName}</h3><div className="understanding-label">Repository understanding</div><p>{brief.purpose.value || 'Repository understanding is unavailable because analysis did not complete.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.citations[0]?.sourceType || brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}{brief.knowledgeGraph && <KnowledgeGraph graph={brief.knowledgeGraph} repositoryName={repositoryName}/>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>
+      })}</div>
     </div>}
   </section>
 }

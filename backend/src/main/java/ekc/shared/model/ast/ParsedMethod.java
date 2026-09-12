@@ -25,6 +25,8 @@ public final class ParsedMethod {
      */
     private final List<String> annotations;
     private final List<String> parameterTypes;
+    private final List<ParsedVariable> parameters;
+    private final List<ParsedVariable> localVariables;
 
     public ParsedMethod(
             String name,
@@ -32,6 +34,19 @@ public final class ParsedMethod {
             List<String> modifiers,
             List<String> annotations,
             List<String> parameterTypes) {
+
+        this(name, returnType, modifiers, annotations,
+                parameterTypes.stream().map(type -> new ParsedVariable("parameter", type)).toList(),
+                List.of());
+    }
+
+    public ParsedMethod(
+            String name,
+            String returnType,
+            List<String> modifiers,
+            List<String> annotations,
+            List<ParsedVariable> parameters,
+            List<ParsedVariable> localVariables) {
 
         this.name =
                 Objects.requireNonNull(name);
@@ -47,9 +62,9 @@ public final class ParsedMethod {
                 List.copyOf(
                         Objects.requireNonNull(annotations));
 
-        this.parameterTypes =
-                List.copyOf(
-                        Objects.requireNonNull(parameterTypes));
+        this.parameters = List.copyOf(Objects.requireNonNull(parameters));
+        this.parameterTypes = this.parameters.stream().map(ParsedVariable::type).toList();
+        this.localVariables = List.copyOf(Objects.requireNonNull(localVariables));
     }
 
     public String getName() {
@@ -70,6 +85,14 @@ public final class ParsedMethod {
 
     public List<String> getParameterTypes() {
         return parameterTypes;
+    }
+
+    public List<ParsedVariable> getParameters() {
+        return parameters;
+    }
+
+    public List<ParsedVariable> getLocalVariables() {
+        return localVariables;
     }
 
     @Override

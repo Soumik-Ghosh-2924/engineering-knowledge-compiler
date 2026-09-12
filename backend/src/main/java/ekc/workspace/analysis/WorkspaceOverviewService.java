@@ -6,6 +6,7 @@ import ekc.api.v2.response.PurposeStatementResponse;
 import ekc.api.v2.response.RepositoryBriefResponse;
 import ekc.api.v2.response.RepositoryChangeAnalysisResponse;
 import ekc.api.v2.response.RepositoryRelationshipResponse;
+import ekc.api.v2.response.RepositoryKnowledgeGraphResponse;
 import ekc.api.v2.response.SystemOverviewResponse;
 import ekc.api.v2.response.WorkspaceOverviewResponse;
 import ekc.workspace.WorkspaceService;
@@ -83,6 +84,10 @@ public class WorkspaceOverviewService {
                                 repository, result.compilationResult().getSummary()),
                 summary,
                 RepositoryChangeAnalysisResponse.from(result.changeAnalysis()),
+                result.compilationResult() == null
+                        ? null
+                        : RepositoryKnowledgeGraphResponse.from(
+                                result.compilationResult().getKnowledgeGraph()),
                 result.message());
     }
 

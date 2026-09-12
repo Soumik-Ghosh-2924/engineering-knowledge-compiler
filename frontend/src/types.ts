@@ -115,6 +115,48 @@ export interface RepositoryChangeAnalysis {
   message: string
 }
 
+export interface KnowledgeVariable {
+  name: string
+  type: string
+}
+
+export interface KnowledgeMethod {
+  name: string
+  returnType: string
+  annotations: string[]
+  parameters: KnowledgeVariable[]
+  localVariables: KnowledgeVariable[]
+}
+
+export interface KnowledgeNode {
+  id: string
+  label: string
+  kind: 'APPLICATION' | 'CONTROLLER' | 'SERVICE' | 'REPOSITORY' | 'MODEL' | 'INTERFACE' | 'CLASS' | 'ENUM' | 'RECORD' | 'ANNOTATION'
+  qualifiedName: string
+  packageName: string | null
+  sourcePath: string
+  annotations: string[]
+  imports: string[]
+  fields: KnowledgeVariable[]
+  methods: KnowledgeMethod[]
+}
+
+export interface KnowledgeEdge {
+  source: string
+  target: string
+  kind: 'DEPENDS_ON' | 'RETURNS' | 'ACCEPTS' | 'USES' | 'IMPORTS' | 'EXTENDS' | 'IMPLEMENTS' | 'DISCOVERS'
+  label: string
+  confidence: string
+  evidence: string
+}
+
+export interface RepositoryKnowledgeGraph {
+  nodes: KnowledgeNode[]
+  edges: KnowledgeEdge[]
+  totalTypeCount: number
+  truncated: boolean
+}
+
 export interface WorkspaceOverviewResponse {
   analysisId: string
   workspaceId: string
@@ -129,6 +171,7 @@ export interface WorkspaceOverviewResponse {
     purpose: PurposeStatement
     analysis: AnalysisSummary | null
     changeAnalysis?: RepositoryChangeAnalysis | null
+    knowledgeGraph?: RepositoryKnowledgeGraph | null
     message: string
   }>
   systemOverview: {

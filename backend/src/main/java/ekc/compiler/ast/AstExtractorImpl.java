@@ -8,6 +8,7 @@ import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.body.VariableDeclarator;
 import ekc.shared.model.acquisition.CompilerContext;
 import ekc.shared.model.acquisition.RepositoryMetadata;
 import ekc.shared.model.analysis.AnalysisStage;
@@ -166,13 +167,30 @@ public class AstExtractorImpl implements AstExtractor {
                                                         variable.getNameAsString())))
                         .toList();
 
+        List<String> extendedTypes = List.of();
+        List<String> implementedTypes = List.of();
+        if (declaration instanceof ClassOrInterfaceDeclaration classDeclaration) {
+            extendedTypes = classDeclaration.getExtendedTypes().stream()
+                    .map(type -> type.getNameWithScope()).toList();
+            implementedTypes = classDeclaration.getImplementedTypes().stream()
+                    .map(type -> type.getNameWithScope()).toList();
+        } else if (declaration instanceof EnumDeclaration enumDeclaration) {
+            implementedTypes = enumDeclaration.getImplementedTypes().stream()
+                    .map(type -> type.getNameWithScope()).toList();
+        } else if (declaration instanceof RecordDeclaration recordDeclaration) {
+            implementedTypes = recordDeclaration.getImplementedTypes().stream()
+                    .map(type -> type.getNameWithScope()).toList();
+        }
+
         return new ParsedType(
                 declaration.getNameAsString(),
                 typeKind,
                 modifiers,
                 annotations,
                 methods,
-                fields
+                fields,
+                extendedTypes,
+                implementedTypes
         );
     }
 
@@ -196,11 +214,19 @@ public class AstExtractorImpl implements AstExtractor {
                                 annotation.getNameAsString())
                         .toList();
 
-        List<String> parameterTypes =
+        List<ParsedVariable> parameters =
                 method.getParameters()
                         .stream()
-                        .map(parameter ->
-                                parameter.getType().asString())
+                        .map(parameter -> new ParsedVariable(
+                                parameter.getNameAsString(),
+                                parameter.getType().asString()))
+                        .toList();
+
+        List<ParsedVariable> localVariables = method.findAll(VariableDeclarator.class)
+                        .stream()
+                        .map(variable -> new ParsedVariable(
+                                variable.getNameAsString(),
+                                variable.getType().asString()))
                         .toList();
 
         return new ParsedMethod(
@@ -208,7 +234,8 @@ public class AstExtractorImpl implements AstExtractor {
                 method.getType().asString(),
                 modifiers,
                 annotations,
-                parameterTypes
+                parameters,
+                localVariables
         );
     }
 

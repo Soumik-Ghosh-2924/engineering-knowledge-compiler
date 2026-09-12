@@ -45,6 +45,8 @@ public final class ParsedType {
      * Fields declared within this type.
      */
     private final List<ParsedField> fields;
+    private final List<String> extendedTypes;
+    private final List<String> implementedTypes;
 
     public ParsedType(
             String name,
@@ -53,6 +55,19 @@ public final class ParsedType {
             List<String> annotations,
             List<ParsedMethod> methods,
             List<ParsedField> fields) {
+
+        this(name, kind, modifiers, annotations, methods, fields, List.of(), List.of());
+    }
+
+    public ParsedType(
+            String name,
+            TypeKind kind,
+            List<String> modifiers,
+            List<String> annotations,
+            List<ParsedMethod> methods,
+            List<ParsedField> fields,
+            List<String> extendedTypes,
+            List<String> implementedTypes) {
 
         this.name =
                 Objects.requireNonNull(name);
@@ -71,6 +86,9 @@ public final class ParsedType {
 
         this.fields =
                 List.copyOf(Objects.requireNonNull(fields));
+
+        this.extendedTypes = List.copyOf(Objects.requireNonNull(extendedTypes));
+        this.implementedTypes = List.copyOf(Objects.requireNonNull(implementedTypes));
     }
 
     public String getName() {
@@ -95,6 +113,14 @@ public final class ParsedType {
 
     public List<ParsedField> getFields() {
         return fields;
+    }
+
+    public List<String> getExtendedTypes() {
+        return extendedTypes;
+    }
+
+    public List<String> getImplementedTypes() {
+        return implementedTypes;
     }
 
     @Override
