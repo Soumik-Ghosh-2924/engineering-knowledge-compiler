@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -36,14 +37,14 @@ public class RepositoryUnderstandingService {
         Path repositoryPath = workspaceProvider.resolveRepositoryLocation(repository.repositoryUri());
         Optional<Path> readme = findReadme(repositoryPath);
         if (readme.isPresent()) {
-            String description = readReadmeSummary(readme.get());
+            String description = readReadmeSummary(readme.get(), summary.getRepositoryName());
             if (!description.isBlank()) {
                 return inferred(
                         description,
                         "HIGH",
                         "README",
                         repositoryPath.relativize(readme.get()).toString(),
-                        "Repository understanding extracted from the first descriptive README section.");
+                        "Repository understanding extracted from the strongest descriptive README section.");
             }
         }
         return inferred(
@@ -86,8 +87,9 @@ public class RepositoryUnderstandingService {
         return name.endsWith(".md") || name.endsWith(".markdown") ? 0 : 1;
     }
 
-    private String readReadmeSummary(Path readme) {
+    private String readReadmeSummary(Path readme, String repositoryName) {
         try (BufferedReader reader = Files.newBufferedReader(readme, StandardCharsets.UTF_8)) {
+            List<String> paragraphs = new ArrayList<>();
             StringBuilder paragraph = new StringBuilder();
             boolean inCodeBlock = false;
             int lines = 0;
@@ -95,29 +97,64 @@ public class RepositoryUnderstandingService {
             while ((line = reader.readLine()) != null && lines++ < MAX_README_LINES) {
                 String trimmed = line.trim();
                 if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+                    addParagraph(paragraphs, paragraph);
                     inCodeBlock = !inCodeBlock;
                     continue;
                 }
-                if (trimmed.isBlank()) {
-                    if (!paragraph.isEmpty()) break;
+                if (inCodeBlock) continue;
+                if (trimmed.isBlank() || trimmed.startsWith("#")) {
+                    addParagraph(paragraphs, paragraph);
                     continue;
                 }
-                if (inCodeBlock || isDecoration(trimmed)) continue;
+                if (isDecoration(trimmed)) continue;
                 String plain = plainText(trimmed);
                 if (plain.isBlank()) continue;
                 if (!paragraph.isEmpty()) paragraph.append(' ');
                 paragraph.append(plain);
-                if (paragraph.length() >= MAX_SUMMARY_LENGTH) break;
+                if (paragraph.length() >= MAX_SUMMARY_LENGTH) {
+                    addParagraph(paragraphs, paragraph);
+                }
             }
-            return limit(paragraph.toString());
+            addParagraph(paragraphs, paragraph);
+            return bestParagraph(paragraphs, repositoryName);
         } catch (IOException exception) {
             return "";
         }
     }
 
+    private void addParagraph(List<String> paragraphs, StringBuilder paragraph) {
+        if (!paragraph.isEmpty()) paragraphs.add(limit(paragraph.toString()));
+        paragraph.setLength(0);
+    }
+
+    private String bestParagraph(List<String> paragraphs, String repositoryName) {
+        String best = "";
+        int bestScore = Integer.MIN_VALUE;
+        for (String candidate : paragraphs) {
+            int score = paragraphScore(candidate, repositoryName);
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return bestScore > 0 ? best : "";
+    }
+
+    private int paragraphScore(String paragraph, String repositoryName) {
+        String value = paragraph.toLowerCase(Locale.ROOT);
+        int score = paragraph.length() >= 60 ? 3 : paragraph.length() >= 30 ? 1 : -2;
+        if (value.matches(".*\\b(is an?|provides?|enables?|helps?|allows?|offers?|implements?|manages?|supports?|coordinates?|serves?)\\b.*")) {
+            score += 6;
+        }
+        String repositoryToken = repositoryName.toLowerCase(Locale.ROOT).replace('-', ' ');
+        if (value.contains(repositoryToken) || value.contains(repositoryName.toLowerCase(Locale.ROOT))) score += 3;
+        if (value.matches("^(see|click|read|note:|for more|documentation|learn more).*")) score -= 10;
+        if (value.contains("license") || value.contains("contribut") || value.contains("issue tracker")) score -= 5;
+        return score;
+    }
+
     private boolean isDecoration(String line) {
-        return line.startsWith("#")
-                || line.startsWith("![")
+        return line.startsWith("![")
                 || line.startsWith("[![")
                 || line.matches("^<[^>]+>$")
                 || line.matches("^[-=*_| ]{3,}$");

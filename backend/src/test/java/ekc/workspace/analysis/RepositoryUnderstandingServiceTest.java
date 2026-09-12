@@ -37,6 +37,11 @@ class RepositoryUnderstandingServiceTest {
 
                 [![Build](https://img.shields.io/badge/build-passing-green)](https://example.com)
 
+                See the presentation here:
+                [Legacy slides](https://example.com/slides)
+
+                ## Run locally
+
                 Acme Checkout coordinates customer payments and gives support teams a reliable transaction view.
 
                 ## Installation
