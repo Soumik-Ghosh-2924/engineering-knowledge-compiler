@@ -294,13 +294,19 @@ footer a { text-decoration: none; font-weight: 600; }
 .relationship-list { display: grid; gap: 5px; margin-top: 18px; }
 .relationship-list strong { margin-bottom: 2px; color: #8d9993; font-size: 8px; }
 .relationship-list span { border-left: 2px solid #46534c; padding: 4px 7px; color: #75817b; font: 500 7px DM Mono, monospace; }
-.method-focus { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #2b3731; color: #76837c; font: 600 7px DM Mono, monospace; text-transform: uppercase; }
+.method-focus { display: flex; align-items: center; gap: 8px; min-height: 45px; box-sizing: border-box; padding: 8px 12px; border-bottom: 1px solid #2b3731; color: #76837c; font: 600 7px DM Mono, monospace; text-transform: uppercase; }
+.method-signature { margin-left: auto; color: #aeb9b2; font: 500 8px DM Mono, monospace; text-transform: none; overflow-wrap: anywhere; }
+.method-signature b { color: #edf2eb; }
+.method-signature i { padding: 0 4px; color: #7f8b85; font-style: normal; }
+.method-signature strong { color: var(--lime); }
 .internal-node { cursor: default; }
 .internal-node.internal-method { cursor: pointer; }
 .internal-node.internal-method:hover rect, .internal-node.internal-method.active rect { stroke: var(--lime); }
 .internal-import rect { fill: #172229; stroke: #4f7287; }
 .internal-field rect { fill: #2d271b; stroke: #9d8349; }
 .internal-method rect { fill: #1e3027; stroke: #5d9f7d; }
+.internal-return rect { fill: #293823; stroke: var(--lime); }
+.internal-return .node-kind { fill: var(--lime); }
 .internal-parameter rect, .internal-local rect { fill: #2c2130; stroke: #8e6795; }
 .empty-column { fill: #5e6a64; font: 500 8px DM Mono, monospace; }
 .graph-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 11px 16px; border-top: 1px solid #2b3731; background: #151f1a; }

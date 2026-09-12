@@ -56,40 +56,46 @@ function ArchitectureGraph({ nodes, edges, selectedId, onSelect, markerId, zoom 
 type InternalNode = { id: string; label: string; detail: string; kind: string; point: Point }
 
 function InternalsGraph({ node, markerId, zoom }: { node: KnowledgeNode; markerId: string; zoom: number }) {
-  const [methodName, setMethodName] = useState(node.methods[0]?.name || '')
-  const activeMethod = node.methods.find((method) => method.name === methodName) || node.methods[0]
+  const [methodIndex, setMethodIndex] = useState(0)
   const imports = node.imports.slice(0, 8)
   const fields = node.fields.slice(0, 8)
   const methods = node.methods.slice(0, 10)
+  const activeMethod = methods[methodIndex] || methods[0]
   const variables = activeMethod ? [...activeMethod.parameters.map((item) => ({ ...item, scope: 'PARAMETER' })), ...activeMethod.localVariables.map((item) => ({ ...item, scope: 'LOCAL' }))].slice(0, 10) : []
-  const rows = Math.max(imports.length, fields.length, methods.length, variables.length, 3)
+  const methodOutputs = activeMethod ? [{ name: activeMethod.returnType || 'unknown', type: 'METHOD RETURN TYPE', scope: 'RETURN' }] : []
+  const methodDetails = [...methodOutputs, ...variables]
+  const rows = Math.max(imports.length, fields.length, methods.length, methodDetails.length, 3)
   const height = Math.max(500, rows * 68 + 100)
   const internalNodes: InternalNode[] = [
     ...imports.map((item, index) => ({ id: `import:${index}`, label: short(item.split('.').pop() || item), detail: item, kind: 'IMPORT', point: { x: 25, y: 54 + index * 68 } })),
     { id: 'class', label: node.label, detail: node.kind, kind: node.kind, point: { x: 245, y: Math.max(150, height / 2 - 30) } },
     ...fields.map((item, index) => ({ id: `field:${index}`, label: short(item.name), detail: item.type, kind: 'FIELD', point: { x: 475, y: 54 + index * 68 } })),
     ...methods.map((item, index) => ({ id: `method:${index}`, label: short(item.name), detail: item.returnType, kind: 'METHOD', point: { x: 700, y: 54 + index * 68 } })),
-    ...variables.map((item, index) => ({ id: `variable:${index}`, label: short(item.name), detail: `${item.scope} · ${item.type}`, kind: item.scope, point: { x: 925, y: 54 + index * 68 } })),
+    ...methodDetails.map((item, index) => ({ id: `${item.scope.toLowerCase()}:${index}`, label: short(item.name), detail: item.scope === 'RETURN' ? item.type : `${item.scope} · ${item.type}`, kind: item.scope, point: { x: 925, y: 54 + index * 68 } })),
   ]
   const center = internalNodes.find((item) => item.id === 'class')!
-  const activeMethodIndex = methods.findIndex((method) => method.name === activeMethod?.name)
-  const activeMethodNode = internalNodes.find((item) => item.id === `method:${activeMethodIndex}`)
+  const activeMethodNode = internalNodes.find((item) => item.id === `method:${methodIndex}`)
+  const selectMethod = (index: number) => setMethodIndex(index)
   return <div className="internals-wrap">
-    <div className="method-focus"><span>Variable scope</span><select value={activeMethod?.name || ''} onChange={(event) => setMethodName(event.target.value)} aria-label="Method variable scope">{methods.map((method) => <option key={method.name} value={method.name}>{method.name}()</option>)}</select></div>
+    <div className="method-focus">
+      <span>Selected method</span>
+      <select value={activeMethod ? methodIndex : ''} onChange={(event) => selectMethod(Number(event.target.value))} aria-label="Method details">{methods.map((method, index) => <option key={`${method.name}:${index}`} value={index}>{method.name}()</option>)}</select>
+      {activeMethod && <code className="method-signature"><b>{activeMethod.name}</b>({activeMethod.parameters.map((parameter) => `${parameter.type} ${parameter.name}`).join(', ')}) <i>→</i> <strong>{activeMethod.returnType || 'unknown'}</strong></code>}
+    </div>
     <svg className="knowledge-svg internals-svg" viewBox={`0 0 1120 ${height}`} style={{ width: `${1120 * zoom}px`, height: `${height * zoom}px` }} aria-label={`${node.label} class internals graph`}>
       <defs><marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
       <g className="internal-edges">
         {internalNodes.filter((item) => item.kind === 'IMPORT').map((item) => <line key={item.id} x1={item.point.x + 150} y1={item.point.y + 25} x2={center.point.x} y2={center.point.y + 25} markerEnd={`url(#${markerId})`}/>)}
         {internalNodes.filter((item) => item.kind === 'FIELD' || item.kind === 'METHOD').map((item) => <line key={item.id} x1={center.point.x + 150} y1={center.point.y + 25} x2={item.point.x} y2={item.point.y + 25} markerEnd={`url(#${markerId})`}/>)}
-        {activeMethodNode && internalNodes.filter((item) => item.kind === 'PARAMETER' || item.kind === 'LOCAL').map((item) => <line key={item.id} x1={activeMethodNode.point.x + 150} y1={activeMethodNode.point.y + 25} x2={item.point.x} y2={item.point.y + 25} markerEnd={`url(#${markerId})`}/>)}
+        {activeMethodNode && internalNodes.filter((item) => item.kind === 'RETURN' || item.kind === 'PARAMETER' || item.kind === 'LOCAL').map((item) => <line key={item.id} x1={activeMethodNode.point.x + 150} y1={activeMethodNode.point.y + 25} x2={item.point.x} y2={item.point.y + 25} markerEnd={`url(#${markerId})`}/>)}
       </g>
-      {internalNodes.map((item) => <g key={item.id} className={`internal-node internal-${item.kind.toLowerCase()}${item.id === `method:${activeMethodIndex}` ? ' active' : ''}`} transform={`translate(${item.point.x} ${item.point.y})`} onClick={() => item.kind === 'METHOD' && setMethodName(methods[Number(item.id.split(':')[1])].name)} role={item.kind === 'METHOD' ? 'button' : undefined} tabIndex={item.kind === 'METHOD' ? 0 : undefined}>
+      {internalNodes.map((item) => <g key={item.id} className={`internal-node internal-${item.kind.toLowerCase()}${item.id === `method:${methodIndex}` ? ' active' : ''}`} transform={`translate(${item.point.x} ${item.point.y})`} onClick={() => item.kind === 'METHOD' && selectMethod(Number(item.id.split(':')[1]))} onKeyDown={(event) => { if (item.kind === 'METHOD' && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); selectMethod(Number(item.id.split(':')[1])) } }} role={item.kind === 'METHOD' ? 'button' : undefined} tabIndex={item.kind === 'METHOD' ? 0 : undefined}>
         <rect width="150" height="50" rx="5"/><text className="node-kind" x="10" y="15">{item.kind}</text><text className="node-label" x="10" y="33">{item.label}</text><title>{item.detail}</title>
       </g>)}
       {imports.length === 0 && <text className="empty-column" x="30" y="35">No imports</text>}
       {fields.length === 0 && <text className="empty-column" x="480" y="35">No fields</text>}
       {methods.length === 0 && <text className="empty-column" x="705" y="35">No methods</text>}
-      {variables.length === 0 && <text className="empty-column" x="930" y="35">No variables for selected method</text>}
+      {!activeMethod && <text className="empty-column" x="930" y="35">Select a method to see inputs and return type</text>}
     </svg>
   </div>
 }
