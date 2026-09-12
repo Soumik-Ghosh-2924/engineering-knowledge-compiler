@@ -263,8 +263,8 @@ footer a { text-decoration: none; font-weight: 600; }
 .zoom-controls button:last-child { width: auto; padding: 0 8px; }
 .zoom-controls span { width: 34px; text-align: center; color: #8d9993; font: 500 7px DM Mono, monospace; }
 .graph-body { display: grid; grid-template-columns: minmax(0, 1fr) 230px; min-height: 470px; }
-.graph-viewport { min-width: 0; overflow: auto; background-color: #101814; background-image: radial-gradient(#34413a 1px, transparent 1px); background-size: 20px 20px; }
-.knowledge-svg { display: block; width: 100%; min-height: 440px; }
+.graph-viewport { min-width: 0; height: 520px; overflow: auto; background-color: #101814; background-image: radial-gradient(#34413a 1px, transparent 1px); background-size: 20px 20px; }
+.knowledge-svg { display: block; max-width: none; transform-origin: top left; }
 .graph-edges line, .internal-edges line { stroke: #4d5c54; stroke-width: 1.2; opacity: .8; vector-effect: non-scaling-stroke; }
 .graph-edges line.edge-discovers, .graph-edges line.edge-imports { stroke: #81906d; stroke-dasharray: 5 5; opacity: .55; }
 .knowledge-svg marker path { fill: #65736b; }
@@ -279,7 +279,7 @@ footer a { text-decoration: none; font-weight: 600; }
 .kind-service rect, .node-kind-pill.kind-service, .graph-legend i.kind-service { fill: #382c1d; background: #382c1d; stroke: #d9a64d; }
 .kind-repository rect, .node-kind-pill.kind-repository, .graph-legend i.kind-repository { fill: #342136; background: #342136; stroke: #b77fc0; }
 .kind-model rect, .node-kind-pill.kind-model, .graph-legend i.kind-model { fill: #20362f; background: #20362f; stroke: #62b797; }
-.node-inspector { border-left: 1px solid #2b3731; padding: 20px; background: #151f1a; overflow: hidden; }
+.node-inspector { max-height: 520px; box-sizing: border-box; border-left: 1px solid #2b3731; padding: 20px; background: #151f1a; overflow: auto; }
 .node-kind-pill { display: inline-flex; padding: 5px 7px; border: 1px solid #46534c; color: #ced7d1; font: 600 7px DM Mono, monospace; letter-spacing: .08em; }
 .node-inspector h4 { margin: 13px 0 6px; font-size: 17px; overflow-wrap: anywhere; }
 .node-inspector > code { display: block; color: #839089; font-size: 7px; overflow-wrap: anywhere; }

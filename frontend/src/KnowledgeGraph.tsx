@@ -39,9 +39,9 @@ function GraphNode({ node, point, selected, onSelect }: { node: KnowledgeNode; p
   </g>
 }
 
-function ArchitectureGraph({ nodes, edges, selectedId, onSelect, markerId }: { nodes: KnowledgeNode[]; edges: KnowledgeEdge[]; selectedId: string; onSelect: (id: string) => void; markerId: string }) {
+function ArchitectureGraph({ nodes, edges, selectedId, onSelect, markerId, zoom }: { nodes: KnowledgeNode[]; edges: KnowledgeEdge[]; selectedId: string; onSelect: (id: string) => void; markerId: string; zoom: number }) {
   const layout = useMemo(() => architectureLayout(nodes), [nodes])
-  return <svg className="knowledge-svg" viewBox={`0 0 ${layout.width} ${layout.height}`} aria-label="Repository architecture graph">
+  return <svg className="knowledge-svg" viewBox={`0 0 ${layout.width} ${layout.height}`} style={{ width: `${layout.width * zoom}px`, height: `${layout.height * zoom}px` }} aria-label="Repository architecture graph">
     <defs><marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
     <g className="graph-edges">{edges.map((edge, index) => {
       const source = layout.positions.get(edge.source)
@@ -55,7 +55,7 @@ function ArchitectureGraph({ nodes, edges, selectedId, onSelect, markerId }: { n
 
 type InternalNode = { id: string; label: string; detail: string; kind: string; point: Point }
 
-function InternalsGraph({ node, markerId }: { node: KnowledgeNode; markerId: string }) {
+function InternalsGraph({ node, markerId, zoom }: { node: KnowledgeNode; markerId: string; zoom: number }) {
   const [methodName, setMethodName] = useState(node.methods[0]?.name || '')
   const activeMethod = node.methods.find((method) => method.name === methodName) || node.methods[0]
   const imports = node.imports.slice(0, 8)
@@ -76,7 +76,7 @@ function InternalsGraph({ node, markerId }: { node: KnowledgeNode; markerId: str
   const activeMethodNode = internalNodes.find((item) => item.id === `method:${activeMethodIndex}`)
   return <div className="internals-wrap">
     <div className="method-focus"><span>Variable scope</span><select value={activeMethod?.name || ''} onChange={(event) => setMethodName(event.target.value)} aria-label="Method variable scope">{methods.map((method) => <option key={method.name} value={method.name}>{method.name}()</option>)}</select></div>
-    <svg className="knowledge-svg internals-svg" viewBox={`0 0 1120 ${height}`} aria-label={`${node.label} class internals graph`}>
+    <svg className="knowledge-svg internals-svg" viewBox={`0 0 1120 ${height}`} style={{ width: `${1120 * zoom}px`, height: `${height * zoom}px` }} aria-label={`${node.label} class internals graph`}>
       <defs><marker id={markerId} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
       <g className="internal-edges">
         {internalNodes.filter((item) => item.kind === 'IMPORT').map((item) => <line key={item.id} x1={item.point.x + 150} y1={item.point.y + 25} x2={center.point.x} y2={center.point.y + 25} markerEnd={`url(#${markerId})`}/>)}
@@ -109,7 +109,7 @@ function NodeInspector({ node, incoming, outgoing, onInternals }: { node: Knowle
 export default function KnowledgeGraph({ graph, repositoryName }: { graph: RepositoryKnowledgeGraph; repositoryName: string }) {
   const markerPrefix = useId().replace(/:/g, '')
   const [mode, setMode] = useState<GraphMode>('architecture')
-  const [filter, setFilter] = useState<GraphFilter>('connected')
+  const [filter, setFilter] = useState<GraphFilter>('layers')
   const [zoom, setZoom] = useState(1)
   const connectedIds = useMemo(() => new Set(graph.edges.flatMap((edge) => [edge.source, edge.target])), [graph.edges])
   const filteredNodes = useMemo(() => {
@@ -134,7 +134,7 @@ export default function KnowledgeGraph({ graph, repositoryName }: { graph: Repos
       <div className="zoom-controls"><button type="button" onClick={() => setZoom((value) => Math.max(.7, value - .15))} aria-label="Zoom out">−</button><span>{Math.round(zoom * 100)}%</span><button type="button" onClick={() => setZoom((value) => Math.min(1.8, value + .15))} aria-label="Zoom in">+</button><button type="button" onClick={() => setZoom(1)}>Reset</button></div>
     </div>
     <div className="graph-body">
-      <div className="graph-viewport"><div style={{ width: `${zoom * 100}%`, minWidth: `${zoom * 850}px` }}>{mode === 'architecture' ? <ArchitectureGraph nodes={filteredNodes} edges={filteredEdges} selectedId={selected.id} onSelect={selectNode} markerId={`${markerPrefix}-architecture-arrow`}/> : <InternalsGraph key={selected.id} node={selected} markerId={`${markerPrefix}-internal-arrow`}/>}</div></div>
+      <div className="graph-viewport">{mode === 'architecture' ? <ArchitectureGraph nodes={filteredNodes} edges={filteredEdges} selectedId={selected.id} onSelect={selectNode} markerId={`${markerPrefix}-architecture-arrow`} zoom={zoom}/> : <InternalsGraph key={selected.id} node={selected} markerId={`${markerPrefix}-internal-arrow`} zoom={zoom}/>}</div>
       <NodeInspector node={selected} outgoing={graph.edges.filter((edge) => edge.source === selected.id)} incoming={graph.edges.filter((edge) => edge.target === selected.id)} onInternals={() => setMode('internals')}/>
     </div>
     <div className="graph-legend">{kindOrder.filter((kind) => graph.nodes.some((node) => node.kind === kind)).map((kind) => <span key={kind}><i className={`kind-${kind.toLowerCase()}`}/>{kind.replace('_', ' ')}</span>)}<span><i className="inferred-edge"/>Inferred discovery</span></div>
