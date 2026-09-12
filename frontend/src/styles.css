@@ -210,10 +210,9 @@ footer a { text-decoration: none; font-weight: 600; }
 
 .workspace-section { max-width: 1160px; margin: 0 auto 110px; }
 .workspace-form { margin-top: 0; padding: clamp(28px, 4vw, 48px); border: 1px solid var(--line); background: var(--card); }
-.workspace-form > label, .repository-input-card label { display: grid; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
-.workspace-form input, .workspace-form select, .workspace-form textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 12px 13px; font: 400 11px DM Mono, monospace; outline: 0; }
-.workspace-form textarea { min-height: 82px; resize: vertical; font-family: Inter, sans-serif; line-height: 1.5; }
-.workspace-form input:focus, .workspace-form select:focus, .workspace-form textarea:focus { border-color: var(--lime-dark); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lime) 25%, transparent); }
+.workspace-form > label, .repository-input-card label, .system-anchor label { display: grid; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.workspace-form input, .workspace-form select { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 12px 13px; font: 400 11px DM Mono, monospace; outline: 0; }
+.workspace-form input:focus, .workspace-form select:focus { border-color: var(--lime-dark); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lime) 25%, transparent); }
 .workspace-repositories { display: grid; gap: 14px; margin-top: 24px; }
 .repository-input-card { padding: 22px; border: 1px solid var(--line); background: var(--paper); display: grid; gap: 16px; }
 .repository-input-heading { display: flex; justify-content: space-between; align-items: center; }
@@ -221,8 +220,8 @@ footer a { text-decoration: none; font-weight: 600; }
 .repository-input-heading button, .workspace-actions > button:first-child { border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; padding: 5px 0; font-size: 10px; font-weight: 700; }
 .repository-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
 .repository-input-card label span { font-weight: 400; }
-.repository-input-card .primary-choice { display: flex; align-items: center; min-height: 42px; grid-template-columns: 18px 1fr; }
-.primary-choice input { width: 16px; height: 16px; padding: 0; accent-color: var(--lime-dark); box-shadow: none; }
+.system-anchor { display: grid; grid-template-columns: minmax(130px, .35fr) minmax(260px, .65fr); gap: 8px 18px; align-items: end; margin-top: 18px; padding: 16px 18px; border-left: 3px solid var(--lime-dark); background: color-mix(in srgb, var(--lime) 9%, var(--paper)); }
+.system-anchor p { grid-column: 1 / -1; margin: 3px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .ref-help { margin: -8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .workspace-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 22px; }
 .workspace-overview { margin-top: 20px; border: 1px solid var(--line); background: var(--card); }
@@ -238,6 +237,7 @@ footer a { text-decoration: none; font-weight: 600; }
 .repository-brief > p { min-height: 42px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 .purpose-class { display: inline-flex; padding: 6px 8px; background: var(--paper); color: var(--muted); font: 600 8px DM Mono, monospace; }
 .purpose-class.declared { color: var(--lime-dark); background: color-mix(in srgb, var(--lime) 25%, transparent); }
+.understanding-label { margin: 18px 0 7px; color: var(--muted); font: 600 8px DM Mono, monospace; letter-spacing: .1em; text-transform: uppercase; }
 .repository-brief dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 18px 0 0; background: var(--line); }
 .repository-brief dl div { padding: 10px; background: var(--paper); }
 .repository-brief dt { color: var(--muted); font: 500 8px DM Mono, monospace; text-transform: uppercase; }
@@ -276,8 +276,10 @@ footer a { text-decoration: none; font-weight: 600; }
 .change-evidence summary { cursor: pointer; padding: 14px 17px; color: var(--ink); font-size: 10px; font-weight: 700; list-style-position: inside; }
 .change-evidence summary span { float: right; color: var(--muted); font: 600 9px DM Mono, monospace; }
 .changed-file-list, .commit-list { max-height: 250px; overflow: auto; border-top: 1px solid var(--line); }
-.changed-file-list > div { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+.changed-file-list > div { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; align-items: center; gap: 9px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
 .changed-file-list code { overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-size: 8px; }
+.changed-file-list a { color: var(--lime-dark); font: 700 7px DM Mono, monospace; text-decoration: none; white-space: nowrap; }
+.changed-file-list a:hover { text-decoration: underline; }
 .change-type { color: var(--muted); font: 700 7px DM Mono, monospace; }
 .change-type.add { color: var(--lime-dark); }
 .change-type.delete { color: var(--red); }
@@ -348,7 +350,8 @@ footer a { text-decoration: none; font-weight: 600; }
   .modal dl { grid-template-columns: 1fr; }
   .analysis-metrics { grid-template-columns: repeat(2, 1fr); }
   .workspace-section { margin-left: 14px; margin-right: 14px; }
-  .repository-input-grid, .repository-briefs, .overview-summary { grid-template-columns: 1fr; }
+  .repository-input-grid, .repository-briefs, .overview-summary, .system-anchor { grid-template-columns: 1fr; }
+  .system-anchor p { grid-column: 1; }
   .change-stats, .risk-signals, .change-evidence { grid-template-columns: 1fr; }
   .change-stats > div { border-right: 0; border-bottom: 1px solid var(--line); }
   .change-heading { align-items: flex-start; flex-direction: column; }

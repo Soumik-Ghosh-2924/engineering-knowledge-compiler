@@ -4,5 +4,6 @@ public record ChangedFile(
         String path,
         String changeType,
         int additions,
-        int deletions) {
+        int deletions,
+        String diffUrl) {
 }

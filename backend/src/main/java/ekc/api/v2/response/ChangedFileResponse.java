@@ -6,9 +6,10 @@ public record ChangedFileResponse(
         String path,
         String changeType,
         int additions,
-        int deletions) {
+        int deletions,
+        String diffUrl) {
     static ChangedFileResponse from(ChangedFile file) {
         return new ChangedFileResponse(
-                file.path(), file.changeType(), file.additions(), file.deletions());
+                file.path(), file.changeType(), file.additions(), file.deletions(), file.diffUrl());
     }
 }

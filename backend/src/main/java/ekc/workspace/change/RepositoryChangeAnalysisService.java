@@ -16,9 +16,13 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -44,7 +48,8 @@ public class RepositoryChangeAnalysisService {
                 fetchComparisonRefs(git, workspaceRepository);
                 ObjectId base = resolve(repository, workspaceRepository.baseRef());
                 ObjectId head = resolve(repository, workspaceRepository.headRef());
-                List<ChangedFile> changedFiles = changedFiles(repository, base, head);
+                List<ChangedFile> changedFiles = changedFiles(
+                        repository, base, head, workspaceRepository.repositoryUri());
                 CommitResult commits = commits(git, base, head);
                 int additions = changedFiles.stream().mapToInt(ChangedFile::additions).sum();
                 int deletions = changedFiles.stream().mapToInt(ChangedFile::deletions).sum();
@@ -110,7 +115,8 @@ public class RepositoryChangeAnalysisService {
     private List<ChangedFile> changedFiles(
             Repository repository,
             ObjectId base,
-            ObjectId head) throws IOException {
+            ObjectId head,
+            URI repositoryUri) throws IOException {
         try (RevWalk walk = new RevWalk(repository);
              DiffFormatter formatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
             RevCommit baseCommit = walk.parseCommit(base);
@@ -134,9 +140,36 @@ public class RepositoryChangeAnalysisService {
                 String path = entry.getChangeType() == DiffEntry.ChangeType.DELETE
                         ? entry.getOldPath()
                         : entry.getNewPath();
-                files.add(new ChangedFile(path, entry.getChangeType().name(), additions, deletions));
+                files.add(new ChangedFile(
+                        path,
+                        entry.getChangeType().name(),
+                        additions,
+                        deletions,
+                        githubDiffUrl(repositoryUri, base, head, path)));
             }
             return List.copyOf(files);
+        }
+    }
+
+    private String githubDiffUrl(
+            URI repositoryUri,
+            ObjectId base,
+            ObjectId head,
+            String path) {
+        if (!"github.com".equalsIgnoreCase(repositoryUri.getHost())) return null;
+        String repositoryPath = repositoryUri.getPath().replaceFirst("\\.git$", "");
+        String anchor = HexFormat.of().formatHex(
+                digest(path.getBytes(StandardCharsets.UTF_8)));
+        return "https://github.com" + repositoryPath
+                + "/compare/" + base.name() + "..." + head.name()
+                + "#diff-" + anchor;
+    }
+
+    private byte[] digest(byte[] value) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(value);
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable.", exception);
         }
     }
 

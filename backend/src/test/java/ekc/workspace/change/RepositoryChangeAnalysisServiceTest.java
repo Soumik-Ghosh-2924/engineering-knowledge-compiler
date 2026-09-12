@@ -64,6 +64,9 @@ class RepositoryChangeAnalysisServiceTest {
         assertThat(result.deletions()).isEqualTo(1);
         assertThat(result.changedFiles()).extracting(ChangedFile::path)
                 .containsExactlyInAnyOrder("pom.xml", "src/main/java/SecurityConfig.java");
+        assertThat(result.changedFiles()).allSatisfy(file -> assertThat(file.diffUrl())
+                .startsWith("https://github.com/acme/app/compare/" + base.name() + "..." + head.name() + "#diff-")
+                .hasSizeGreaterThan(120));
         assertThat(result.riskSignals()).extracting(RiskSignal::category)
                 .contains("DEPENDENCY_CHANGE", "SECURITY_REVIEW");
     }

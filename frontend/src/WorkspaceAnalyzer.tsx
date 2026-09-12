@@ -6,8 +6,13 @@ type RepositoryDraft = WorkspaceRepositoryInput & { key: string }
 
 const newRepository = (primary = false): RepositoryDraft => ({
   key: crypto.randomUUID(), repositoryUrl: '', role: primary ? 'APPLICATION' : 'SERVICE', primary,
-  baseRef: '', headRef: '', declaredPurpose: '',
+  baseRef: '', headRef: '',
 })
+
+const repositoryLabel = (repository: RepositoryDraft, index: number) => {
+  const pathName = repository.repositoryUrl.trim().replace(/\/$/, '').split('/').pop()?.replace(/\.git$/, '')
+  return `Repository ${index + 1} — ${pathName || repository.role.toLowerCase().replace('_', ' ')}`
+}
 
 const terminalStatuses = new Set(['COMPLETED', 'PARTIALLY_COMPLETED', 'FAILED'])
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
@@ -34,10 +39,10 @@ function ChangeIntelligence({ change }: { change?: RepositoryChangeAnalysis | nu
     </article>)}</div> : <div className="no-risk-signals">No dependency, deployment, data, security-sensitive, or broad-change signals were detected by the current rules.</div>}
     <div className="change-evidence">
       <details open><summary>Changed files <span>{change.changedFiles.length}{change.changedFileCount > change.changedFiles.length ? '+' : ''}</span></summary>
-        <div className="changed-file-list">{change.changedFiles.map((file) => <div key={`${file.changeType}:${file.path}`}><span className={`change-type ${file.changeType.toLowerCase()}`}>{file.changeType}</span><code>{file.path}</code><span className="line-delta">+{file.additions} −{file.deletions}</span></div>)}</div>
+        <div className="changed-file-list">{change.changedFiles.map((file) => <div key={`${file.changeType}:${file.path}`}><span className={`change-type ${file.changeType.toLowerCase()}`}>{file.changeType}</span><code>{file.path}</code><span className="line-delta">+{file.additions} −{file.deletions}</span>{file.diffUrl && <a href={file.diffUrl} target="_blank" rel="noreferrer" aria-label={`Open GitHub diff for ${file.path}`}>Open diff ↗</a>}</div>)}</div>
       </details>
       <details><summary>Commits <span>{change.commits.length}{change.commitsTruncated ? '+' : ''}</span></summary>
-        <div className="commit-list">{change.commits.map((commit) => <div key={commit.id}><code>{commit.shortId}</code><span><strong>{commit.message}</strong><small>{commit.author} · {new Date(commit.authoredAt).toLocaleDateString()}</small></span></div>)}</div>
+        <div className="commit-list">{change.commits.map((commit) => <div key={commit.id}><code>{commit.shortId}</code><span><strong>{commit.message}</strong><small>{commit.author} · <time dateTime={commit.authoredAt}>{new Date(commit.authoredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time></small></span></div>)}</div>
       </details>
     </div>
     <p className="change-disclaimer">Review signals identify areas needing attention. They are not vulnerability findings and do not replace dependency or security scanners.</p>
@@ -91,7 +96,6 @@ export default function WorkspaceAnalyzer() {
         primary: repository.primary,
         baseRef: repository.baseRef?.trim(),
         headRef: repository.headRef?.trim(),
-        declaredPurpose: repository.declaredPurpose?.trim(),
       })))
       setStatus('Analysis queued')
       let analysis = await startWorkspaceAnalysis(workspace.id)
@@ -125,19 +129,24 @@ export default function WorkspaceAnalyzer() {
             <label>Role<select value={repository.role} onChange={(event) => updateRepository(repository.key, { role: event.target.value as RepositoryRole })} disabled={working}>
               <option value="APPLICATION">Application</option><option value="DEPLOYMENT">Deployment / GitOps</option><option value="SERVICE">Service</option><option value="SHARED_LIBRARY">Shared library</option>
             </select></label>
-            <label className="primary-choice"><input type="radio" name="primary-repository" checked={repository.primary} onChange={() => selectPrimary(repository.key)} disabled={working}/> Primary change target</label>
           </div>
           <div className="repository-input-grid"><label>Compare from (base ref)<input value={repository.baseRef} onChange={(event) => updateRepository(repository.key, { baseRef: event.target.value })} placeholder="main or commit SHA" disabled={working}/></label><label>Compare to (head ref)<input value={repository.headRef} onChange={(event) => updateRepository(repository.key, { headRef: event.target.value })} placeholder="branch, pull/123, tag, or SHA" disabled={working}/></label></div>
           <p className="ref-help">Optional. Provide both refs to inspect commits, file changes, dependencies, deployment impact, and review risks.</p>
-          <label>Declared purpose <span>(optional)</span><textarea value={repository.declaredPurpose} onChange={(event) => updateRepository(repository.key, { declaredPurpose: event.target.value })} placeholder="What does this repository provide, and who benefits?" disabled={working}/></label>
         </article>)}
+      </div>
+      <div className="system-anchor">
+        <label htmlFor="system-anchor">System anchor</label>
+        <select id="system-anchor" value={repositories.find((repository) => repository.primary)?.key || ''} onChange={(event) => selectPrimary(event.target.value)} disabled={working}>
+          {repositories.map((repository, index) => <option key={repository.key} value={repository.key}>{repositoryLabel(repository, index)}</option>)}
+        </select>
+        <p>Select the repository that provides the main context for the system overview. Change analysis still runs for every repository with both refs supplied.</p>
       </div>
       <div className="workspace-actions"><button type="button" onClick={() => setRepositories((current) => [...current, newRepository()])} disabled={working || repositories.length >= 5}>+ Add repository</button><button className="primary-button" type="submit" disabled={working}>{working ? status : 'Build system overview'}</button></div>
       {error && <div className="form-error" role="alert">{error}</div>}
     </form>
     {overview && <div className="workspace-overview" aria-label="Workspace system overview">
       <div className="overview-summary"><div><span>Workspace</span><strong>{overview.workspaceName}</strong></div><div><span>Analyzed</span><strong>{overview.systemOverview.analyzedRepositories}/{overview.systemOverview.repositories}</strong></div><div><span>Relationships</span><strong>{overview.systemOverview.suggestedRelationships.length}</strong></div></div>
-      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · PRIMARY' : ''}</div><h3>{brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '')}</h3><p>{brief.purpose.value || 'Purpose is unknown. Add declared context rather than relying on an unsupported inference.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>)}</div>
+      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · SYSTEM ANCHOR' : ''}</div><h3>{brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '')}</h3><div className="understanding-label">Repository understanding</div><p>{brief.purpose.value || 'Repository understanding is unavailable because analysis did not complete.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.citations[0]?.sourceType || brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>)}</div>
     </div>}
   </section>
 }

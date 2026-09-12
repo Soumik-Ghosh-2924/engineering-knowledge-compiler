@@ -22,12 +22,15 @@ import java.util.UUID;
 public class WorkspaceOverviewService {
     private final WorkspaceService workspaceService;
     private final WorkspaceAnalysisService analysisService;
+    private final RepositoryUnderstandingService understandingService;
 
     public WorkspaceOverviewService(
             WorkspaceService workspaceService,
-            WorkspaceAnalysisService analysisService) {
+            WorkspaceAnalysisService analysisService,
+            RepositoryUnderstandingService understandingService) {
         this.workspaceService = workspaceService;
         this.analysisService = analysisService;
+        this.understandingService = understandingService;
     }
 
     public WorkspaceOverviewResponse create(UUID analysisId) {
@@ -74,24 +77,13 @@ public class WorkspaceOverviewService {
                 repository.role(),
                 repository.primary(),
                 result.status(),
-                purpose(repository),
+                result.compilationResult() == null
+                        ? new PurposeStatementResponse(null, "UNKNOWN", "NONE", List.of())
+                        : understandingService.understand(
+                                repository, result.compilationResult().getSummary()),
                 summary,
                 RepositoryChangeAnalysisResponse.from(result.changeAnalysis()),
                 result.message());
-    }
-
-    private PurposeStatementResponse purpose(WorkspaceRepository repository) {
-        if (repository.declaredPurpose() == null || repository.declaredPurpose().isBlank()) {
-            return new PurposeStatementResponse(null, "UNKNOWN", "NONE", List.of());
-        }
-        return new PurposeStatementResponse(
-                repository.declaredPurpose(),
-                "DECLARED",
-                "HIGH",
-                List.of(new EvidenceCitationResponse(
-                        "USER_INPUT",
-                        repository.repositoryUri().toString(),
-                        "Purpose supplied when the workspace was created.")));
     }
 
     private List<RepositoryRelationshipResponse> suggestRelationships(Workspace workspace) {

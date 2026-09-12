@@ -103,6 +103,7 @@ export interface RepositoryChangeAnalysis {
     changeType: string
     additions: number
     deletions: number
+    diffUrl: string | null
   }>
   riskSignals: Array<{
     category: string
