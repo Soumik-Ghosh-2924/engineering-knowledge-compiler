@@ -45,7 +45,24 @@ class WorkspaceServiceTest {
                 .hasMessage("Exactly one repository must be marked as primary.");
     }
 
+    @Test
+    void requiresBothRefsForChangeAnalysis() {
+        CreateWorkspaceRequest request = new CreateWorkspaceRequest(
+                "Invalid refs",
+                List.of(new WorkspaceRepositoryRequest(
+                        "https://github.com/acme/app.git",
+                        RepositoryRole.APPLICATION,
+                        true,
+                        "main",
+                        null,
+                        null)));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must be provided together");
+    }
+
     private WorkspaceRepositoryRequest repository(String url, RepositoryRole role, boolean primary) {
-        return new WorkspaceRepositoryRequest(url, role, primary, "main", null, null);
+        return new WorkspaceRepositoryRequest(url, role, primary, null, null, null);
     }
 }

@@ -15,6 +15,19 @@ describe('Phase 2 workspace analyzer', () => {
     expect(screen.getAllByText('Repository URL')).toHaveLength(2)
   })
 
+  it('requires a complete ref pair before requesting change analysis', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    render(<WorkspaceAnalyzer />)
+    fireEvent.change(screen.getByLabelText('Workspace name'), { target: { value: 'EKC system' } })
+    fireEvent.change(screen.getByText('Repository URL').querySelector('input')!, { target: { value: 'https://github.com/acme/app.git' } })
+    fireEvent.change(screen.getByLabelText('Compare from (base ref)'), { target: { value: 'main' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Build system overview' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Provide both the base and head ref')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('creates, analyzes, and displays a workspace overview', async () => {
     const responses = [
       {
@@ -28,6 +41,14 @@ describe('Phase 2 workspace analyzer', () => {
           repositoryId: 'repository-1', repositoryUrl: 'https://github.com/acme/app.git', role: 'APPLICATION', primary: true,
           status: 'ANALYZED', purpose: { value: 'Analyzes code', classification: 'DECLARED', confidence: 'HIGH', citations: [] },
           analysis: { repositoryName: 'app', defaultBranch: 'main', sourceFiles: 3, parsedFiles: 3, extractedFiles: 3, packages: 1, imports: 2, types: 2, fields: 1, methods: 4, annotations: 0, diagnostics: [] },
+          changeAnalysis: {
+            status: 'ANALYZED', baseRef: 'main', headRef: 'feature/change', baseCommit: 'a', headCommit: 'b',
+            commitCount: 1, commitsTruncated: false, changedFileCount: 2, additions: 12, deletions: 3,
+            commits: [{ id: 'b', shortId: 'b1234567', message: 'Change dependencies', author: 'Engineer', authoredAt: '2026-09-11T00:00:00Z' }],
+            changedFiles: [{ path: 'pom.xml', changeType: 'MODIFY', additions: 3, deletions: 1 }],
+            riskSignals: [{ category: 'DEPENDENCY_CHANGE', severity: 'HIGH', title: 'Dependency definition changed', description: 'Review dependencies.', evidence: ['pom.xml'] }],
+            message: 'Compared',
+          },
           message: 'Analyzed',
         }],
         systemOverview: { repositories: 1, analyzedRepositories: 1, failedRepositories: 0, suggestedRelationships: [] },
@@ -41,6 +62,8 @@ describe('Phase 2 workspace analyzer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Build system overview' }))
     await waitFor(() => expect(screen.getByLabelText('Workspace system overview')).toHaveTextContent('EKC system'))
     expect(screen.getAllByText('Analyzes code')).toHaveLength(2)
+    expect(screen.getByText('Change intelligence')).toBeInTheDocument()
+    expect(screen.getByText('Dependency definition changed')).toBeInTheDocument()
     expect(globalThis.fetch).toHaveBeenCalledTimes(3)
   })
 })

@@ -4,6 +4,8 @@ import ekc.compiler.CompilerEngine;
 import ekc.shared.model.acquisition.CompileRepositoryRequest;
 import ekc.shared.model.analysis.CompilationResult;
 import ekc.workspace.WorkspaceService;
+import ekc.workspace.change.RepositoryChangeAnalysis;
+import ekc.workspace.change.RepositoryChangeAnalysisService;
 import ekc.workspace.model.Workspace;
 import ekc.workspace.model.WorkspaceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,7 @@ import java.util.concurrent.Executor;
 public class WorkspaceAnalysisService {
     private final WorkspaceService workspaceService;
     private final CompilerEngine compilerEngine;
+    private final RepositoryChangeAnalysisService changeAnalysisService;
     private final Executor executor;
     private final Clock clock;
     private final ConcurrentHashMap<UUID, WorkspaceAnalysis> analyses = new ConcurrentHashMap<>();
@@ -31,17 +34,20 @@ public class WorkspaceAnalysisService {
     public WorkspaceAnalysisService(
             WorkspaceService workspaceService,
             CompilerEngine compilerEngine,
+            RepositoryChangeAnalysisService changeAnalysisService,
             @Qualifier("phase2AnalysisExecutor") Executor executor) {
-        this(workspaceService, compilerEngine, executor, Clock.systemUTC());
+        this(workspaceService, compilerEngine, changeAnalysisService, executor, Clock.systemUTC());
     }
 
     WorkspaceAnalysisService(
             WorkspaceService workspaceService,
             CompilerEngine compilerEngine,
+            RepositoryChangeAnalysisService changeAnalysisService,
             Executor executor,
             Clock clock) {
         this.workspaceService = workspaceService;
         this.compilerEngine = compilerEngine;
+        this.changeAnalysisService = changeAnalysisService;
         this.executor = executor;
         this.clock = clock;
     }
@@ -51,7 +57,7 @@ public class WorkspaceAnalysisService {
         List<RepositoryAnalysisResult> queuedRepositories = workspace.repositories().stream()
                 .map(repository -> new RepositoryAnalysisResult(
                         repository.id(), repository.repositoryUri().toString(),
-                        "QUEUED", "Waiting for analysis.", null))
+                        "QUEUED", "Waiting for analysis.", null, null))
                 .toList();
         WorkspaceAnalysis queued = new WorkspaceAnalysis(
                 UUID.randomUUID(), workspaceId, WorkspaceAnalysisStatus.QUEUED,
@@ -80,20 +86,21 @@ public class WorkspaceAnalysisService {
             try {
                 CompilationResult result = compilerEngine.analyze(
                         new CompileRepositoryRequest(repository.repositoryUri()));
+                RepositoryChangeAnalysis changeAnalysis = changeAnalysisService.analyze(repository);
                 results.add(new RepositoryAnalysisResult(
                         repository.id(), repository.repositoryUri().toString(),
-                        result.getStatus(), result.getMessage(), result));
+                        result.getStatus(), result.getMessage(), result, changeAnalysis));
             } catch (RuntimeException exception) {
                 results.add(new RepositoryAnalysisResult(
                         repository.id(), repository.repositoryUri().toString(),
-                        "FAILED", safeMessage(exception), null));
+                        "FAILED", safeMessage(exception), null, null));
             }
             List<RepositoryAnalysisResult> progress = new ArrayList<>(results);
             workspace.repositories().stream()
                     .skip(results.size())
                     .map(queuedRepository -> new RepositoryAnalysisResult(
                             queuedRepository.id(), queuedRepository.repositoryUri().toString(),
-                            "QUEUED", "Waiting for analysis.", null))
+                            "QUEUED", "Waiting for analysis.", null, null))
                     .forEach(progress::add);
             analyses.put(analysisId, new WorkspaceAnalysis(
                     queued.id(), queued.workspaceId(), WorkspaceAnalysisStatus.RUNNING,

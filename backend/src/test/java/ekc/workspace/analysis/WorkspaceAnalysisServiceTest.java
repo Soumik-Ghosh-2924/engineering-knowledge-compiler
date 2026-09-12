@@ -9,6 +9,8 @@ import ekc.shared.model.ast.RepositoryAst;
 import ekc.shared.model.source.RepositorySource;
 import ekc.shared.model.structure.RepositoryStructure;
 import ekc.workspace.WorkspaceService;
+import ekc.workspace.change.RepositoryChangeAnalysis;
+import ekc.workspace.change.RepositoryChangeAnalysisService;
 import ekc.workspace.model.RepositoryRole;
 import ekc.workspace.model.Workspace;
 import ekc.workspace.model.WorkspaceRepository;
@@ -34,6 +36,7 @@ class WorkspaceAnalysisServiceTest {
     void preservesSuccessfulResultsWhenAnotherRepositoryFails() {
         WorkspaceService workspaceService = mock(WorkspaceService.class);
         CompilerEngine compilerEngine = mock(CompilerEngine.class);
+        RepositoryChangeAnalysisService changeAnalysisService = mock(RepositoryChangeAnalysisService.class);
         UUID workspaceId = UUID.randomUUID();
         Workspace workspace = new Workspace(
                 workspaceId,
@@ -47,10 +50,12 @@ class WorkspaceAnalysisServiceTest {
         when(compilerEngine.analyze(any()))
                 .thenReturn(success)
                 .thenThrow(new IllegalStateException("Repository unavailable."));
+        when(changeAnalysisService.analyze(any())).thenReturn(RepositoryChangeAnalysis.notRequested());
 
         WorkspaceAnalysisService service = new WorkspaceAnalysisService(
                 workspaceService,
                 compilerEngine,
+                changeAnalysisService,
                 Runnable::run,
                 Clock.fixed(Instant.parse("2026-09-11T00:01:00Z"), ZoneOffset.UTC));
 

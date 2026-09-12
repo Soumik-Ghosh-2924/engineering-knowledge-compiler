@@ -13,5 +13,6 @@ public record RepositoryBriefResponse(
         String status,
         PurposeStatementResponse purpose,
         AnalysisSummaryResponse analysis,
+        RepositoryChangeAnalysisResponse changeAnalysis,
         String message) {
 }

@@ -80,6 +80,40 @@ export interface PurposeStatement {
   citations: Array<{ sourceType: string; source: string; description: string }>
 }
 
+export interface RepositoryChangeAnalysis {
+  status: 'NOT_REQUESTED' | 'ANALYZED' | 'FAILED'
+  baseRef: string | null
+  headRef: string | null
+  baseCommit: string | null
+  headCommit: string | null
+  commitCount: number
+  commitsTruncated: boolean
+  changedFileCount: number
+  additions: number
+  deletions: number
+  commits: Array<{
+    id: string
+    shortId: string
+    message: string
+    author: string
+    authoredAt: string
+  }>
+  changedFiles: Array<{
+    path: string
+    changeType: string
+    additions: number
+    deletions: number
+  }>
+  riskSignals: Array<{
+    category: string
+    severity: 'HIGH' | 'MEDIUM' | 'LOW'
+    title: string
+    description: string
+    evidence: string[]
+  }>
+  message: string
+}
+
 export interface WorkspaceOverviewResponse {
   analysisId: string
   workspaceId: string
@@ -93,6 +127,7 @@ export interface WorkspaceOverviewResponse {
     status: string
     purpose: PurposeStatement
     analysis: AnalysisSummary | null
+    changeAnalysis?: RepositoryChangeAnalysis | null
     message: string
   }>
   systemOverview: {

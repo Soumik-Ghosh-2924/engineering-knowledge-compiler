@@ -57,9 +57,23 @@ public class WorkspaceService {
     private WorkspaceRepository createRepository(WorkspaceRepositoryRequest request) {
         URI uri = URI.create(request.repositoryUrl().trim());
         repositoryValidator.validate(new CompileRepositoryRequest(uri));
+        validateRefs(request.baseRef(), request.headRef());
         return new WorkspaceRepository(
                 UUID.randomUUID(), uri, request.role(), request.primary(),
                 normalize(request.baseRef()), normalize(request.headRef()), normalize(request.declaredPurpose()));
+    }
+
+    private void validateRefs(String baseRef, String headRef) {
+        boolean hasBase = baseRef != null && !baseRef.isBlank();
+        boolean hasHead = headRef != null && !headRef.isBlank();
+        if (hasBase != hasHead) {
+            throw new IllegalArgumentException(
+                    "Base ref and head ref must be provided together for change analysis.");
+        }
+        if (hasBase && baseRef.trim().equals(headRef.trim())) {
+            throw new IllegalArgumentException(
+                    "Base ref and head ref must be different for change analysis.");
+        }
     }
 
     private String normalize(String value) {

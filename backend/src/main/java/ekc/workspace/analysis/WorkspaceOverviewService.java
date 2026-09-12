@@ -4,6 +4,7 @@ import ekc.api.response.AnalysisSummaryResponse;
 import ekc.api.v2.response.EvidenceCitationResponse;
 import ekc.api.v2.response.PurposeStatementResponse;
 import ekc.api.v2.response.RepositoryBriefResponse;
+import ekc.api.v2.response.RepositoryChangeAnalysisResponse;
 import ekc.api.v2.response.RepositoryRelationshipResponse;
 import ekc.api.v2.response.SystemOverviewResponse;
 import ekc.api.v2.response.WorkspaceOverviewResponse;
@@ -63,7 +64,7 @@ public class WorkspaceOverviewService {
                 .findFirst()
                 .orElse(new RepositoryAnalysisResult(
                         repository.id(), repository.repositoryUri().toString(),
-                        "FAILED", "Repository was not analyzed.", null));
+                        "FAILED", "Repository was not analyzed.", null, null));
         AnalysisSummaryResponse summary = result.compilationResult() == null
                 ? null
                 : new AnalysisSummaryResponse(result.compilationResult().getSummary());
@@ -75,6 +76,7 @@ public class WorkspaceOverviewService {
                 result.status(),
                 purpose(repository),
                 summary,
+                RepositoryChangeAnalysisResponse.from(result.changeAnalysis()),
                 result.message());
     }
 

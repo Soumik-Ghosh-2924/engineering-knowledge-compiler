@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { createWorkspace, getWorkspaceAnalysis, getWorkspaceOverview, startWorkspaceAnalysis } from './api'
-import type { RepositoryRole, WorkspaceOverviewResponse, WorkspaceRepositoryInput } from './types'
+import type { RepositoryChangeAnalysis, RepositoryRole, WorkspaceOverviewResponse, WorkspaceRepositoryInput } from './types'
 
 type RepositoryDraft = WorkspaceRepositoryInput & { key: string }
 
@@ -11,6 +11,38 @@ const newRepository = (primary = false): RepositoryDraft => ({
 
 const terminalStatuses = new Set(['COMPLETED', 'PARTIALLY_COMPLETED', 'FAILED'])
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+
+function ChangeIntelligence({ change }: { change?: RepositoryChangeAnalysis | null }) {
+  if (!change || change.status === 'NOT_REQUESTED') {
+    return <div className="change-empty"><strong>Change intelligence not requested</strong><span>Add both a base and head ref to compare a branch, release, commit, or pull-request head.</span></div>
+  }
+  if (change.status === 'FAILED') {
+    return <div className="change-empty change-failed"><strong>Change comparison unavailable</strong><span>{change.message}</span></div>
+  }
+  return <section className="change-intelligence" aria-label="Repository change intelligence">
+    <div className="change-heading"><div><span>Change intelligence</span><strong>{change.baseRef} → {change.headRef}</strong></div><span className="change-method">STATIC DIFF · NO CODE EXECUTION</span></div>
+    <div className="change-stats">
+      <div><span>Commits</span><strong>{change.commitsTruncated ? `${change.commitCount - 1}+` : change.commitCount}</strong></div>
+      <div><span>Changed files</span><strong>{change.changedFileCount}</strong></div>
+      <div><span>Lines</span><strong><em>+{change.additions}</em> <b>−{change.deletions}</b></strong></div>
+      <div><span>Review signals</span><strong>{change.riskSignals.length}</strong></div>
+    </div>
+    {change.riskSignals.length > 0 ? <div className="risk-signals">{change.riskSignals.map((signal) => <article className={`risk-signal ${signal.severity.toLowerCase()}`} key={signal.category}>
+      <div><span>{signal.severity}</span><strong>{signal.title}</strong></div>
+      <p>{signal.description}</p>
+      <ul>{signal.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+    </article>)}</div> : <div className="no-risk-signals">No dependency, deployment, data, security-sensitive, or broad-change signals were detected by the current rules.</div>}
+    <div className="change-evidence">
+      <details open><summary>Changed files <span>{change.changedFiles.length}{change.changedFileCount > change.changedFiles.length ? '+' : ''}</span></summary>
+        <div className="changed-file-list">{change.changedFiles.map((file) => <div key={`${file.changeType}:${file.path}`}><span className={`change-type ${file.changeType.toLowerCase()}`}>{file.changeType}</span><code>{file.path}</code><span className="line-delta">+{file.additions} −{file.deletions}</span></div>)}</div>
+      </details>
+      <details><summary>Commits <span>{change.commits.length}{change.commitsTruncated ? '+' : ''}</span></summary>
+        <div className="commit-list">{change.commits.map((commit) => <div key={commit.id}><code>{commit.shortId}</code><span><strong>{commit.message}</strong><small>{commit.author} · {new Date(commit.authoredAt).toLocaleDateString()}</small></span></div>)}</div>
+      </details>
+    </div>
+    <p className="change-disclaimer">Review signals identify areas needing attention. They are not vulnerability findings and do not replace dependency or security scanners.</p>
+  </section>
+}
 
 export default function WorkspaceAnalyzer() {
   const [name, setName] = useState('')
@@ -44,6 +76,12 @@ export default function WorkspaceAnalyzer() {
     setOverview(null)
     if (!name.trim()) return setError('Name this workspace before starting analysis.')
     if (repositories.some((repository) => !repository.repositoryUrl.trim())) return setError('Every repository needs a URL.')
+    if (repositories.some((repository) => Boolean(repository.baseRef?.trim()) !== Boolean(repository.headRef?.trim()))) {
+      return setError('Provide both the base and head ref for each requested change comparison.')
+    }
+    if (repositories.some((repository) => repository.baseRef?.trim() && repository.baseRef.trim() === repository.headRef?.trim())) {
+      return setError('The base and head refs must be different.')
+    }
     setWorking(true)
     try {
       setStatus('Creating workspace')
@@ -89,7 +127,8 @@ export default function WorkspaceAnalyzer() {
             </select></label>
             <label className="primary-choice"><input type="radio" name="primary-repository" checked={repository.primary} onChange={() => selectPrimary(repository.key)} disabled={working}/> Primary change target</label>
           </div>
-          <div className="repository-input-grid"><label>Base ref<input value={repository.baseRef} onChange={(event) => updateRepository(repository.key, { baseRef: event.target.value })} placeholder="main" disabled={working}/></label><label>Head ref<input value={repository.headRef} onChange={(event) => updateRepository(repository.key, { headRef: event.target.value })} placeholder="feature/my-change" disabled={working}/></label></div>
+          <div className="repository-input-grid"><label>Compare from (base ref)<input value={repository.baseRef} onChange={(event) => updateRepository(repository.key, { baseRef: event.target.value })} placeholder="main or commit SHA" disabled={working}/></label><label>Compare to (head ref)<input value={repository.headRef} onChange={(event) => updateRepository(repository.key, { headRef: event.target.value })} placeholder="branch, pull/123, tag, or SHA" disabled={working}/></label></div>
+          <p className="ref-help">Optional. Provide both refs to inspect commits, file changes, dependencies, deployment impact, and review risks.</p>
           <label>Declared purpose <span>(optional)</span><textarea value={repository.declaredPurpose} onChange={(event) => updateRepository(repository.key, { declaredPurpose: event.target.value })} placeholder="What does this repository provide, and who benefits?" disabled={working}/></label>
         </article>)}
       </div>
@@ -98,7 +137,7 @@ export default function WorkspaceAnalyzer() {
     </form>
     {overview && <div className="workspace-overview" aria-label="Workspace system overview">
       <div className="overview-summary"><div><span>Workspace</span><strong>{overview.workspaceName}</strong></div><div><span>Analyzed</span><strong>{overview.systemOverview.analyzedRepositories}/{overview.systemOverview.repositories}</strong></div><div><span>Relationships</span><strong>{overview.systemOverview.suggestedRelationships.length}</strong></div></div>
-      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · PRIMARY' : ''}</div><h3>{brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '')}</h3><p>{brief.purpose.value || 'Purpose is unknown. Add declared context rather than relying on an unsupported inference.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>)}</div>
+      <div className="repository-briefs">{overview.repositoryBriefs.map((brief) => <article key={brief.repositoryId} className="repository-brief"><div className="brief-role">{brief.role.replace('_', ' ')}{brief.primary ? ' · PRIMARY' : ''}</div><h3>{brief.analysis?.repositoryName || new URL(brief.repositoryUrl).pathname.split('/').pop()?.replace('.git', '')}</h3><p>{brief.purpose.value || 'Purpose is unknown. Add declared context rather than relying on an unsupported inference.'}</p><span className={`purpose-class ${brief.purpose.classification.toLowerCase()}`}>{brief.purpose.classification} · {brief.purpose.confidence}</span>{brief.analysis && <dl><div><dt>Sources</dt><dd>{brief.analysis.sourceFiles}</dd></div><div><dt>Types</dt><dd>{brief.analysis.types}</dd></div><div><dt>Methods</dt><dd>{brief.analysis.methods}</dd></div></dl>}<ChangeIntelligence change={brief.changeAnalysis}/>{brief.status === 'FAILED' && <div className="brief-error">{brief.message}</div>}</article>)}</div>
     </div>}
   </section>
 }
